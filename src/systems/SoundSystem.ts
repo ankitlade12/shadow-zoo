@@ -30,7 +30,7 @@ const stageToWorld = (s: Stage, x: number, y: number): Vec3 => [
 ];
 
 /** Plays game events as spatial sounds on the wall and keeps the listener on the player's head. */
-export class AudioSystem extends createSystem({}) {
+export class SoundSystem extends createSystem({}) {
   private readonly engine = new AudioEngine();
   private readonly v = new Vector3();
   private readonly f = new Vector3();

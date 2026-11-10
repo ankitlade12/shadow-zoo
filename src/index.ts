@@ -1,6 +1,6 @@
 import { World } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
-import { AudioSystem } from './systems/AudioSystem.js';
+import { SoundSystem } from './systems/SoundSystem.js';
 import { GameSystem } from './systems/GameSystem.js';
 import { HandSystem } from './systems/HandSystem.js';
 import { RenderSystem } from './systems/RenderSystem.js';
@@ -12,5 +12,5 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, proje
     .registerSystem(StageSystem, { priority: 1 })
     .registerSystem(GameSystem, { priority: 10 })
     .registerSystem(RenderSystem, { priority: 25 })
-    .registerSystem(AudioSystem, { priority: 30 });
+    .registerSystem(SoundSystem, { priority: 30 });
 });
