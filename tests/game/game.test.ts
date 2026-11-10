@@ -140,4 +140,13 @@ describe('Zoo', () => {
     expect(zoo.fireflies.list).toHaveLength(0);
     expect(events.filter((e) => e.type === 'eat' && e.species === 'crocodile')).toHaveLength(1);
   });
+
+  it('a pinch feeds unless the worn creature speaks by pinching', () => {
+    const { zoo, events } = freshZoo('dog', -0.5);
+    const wornAs = (species: 'dog' | 'crocodile'): Worn => ({ species, side: 'right', eyeX: 0, eyeY: 0, tipX: 0, tipY: 0, voice: false });
+    zoo.update(1 / 60, pool, [pinchAt(0.3, 0.2)], wornAs('dog'), events);
+    expect(zoo.fireflies.list).toHaveLength(1);
+    zoo.update(1 / 60, pool, [pinchAt(0.1, 0.2)], wornAs('crocodile'), events);
+    expect(zoo.fireflies.list).toHaveLength(1);
+  });
 });

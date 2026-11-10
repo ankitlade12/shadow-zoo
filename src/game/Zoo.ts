@@ -1,6 +1,7 @@
 import { Creature, type CreatureEvent, type Pool } from '../core/creature.js';
 import { Fireflies } from '../core/fireflies.js';
 import { capsulesNear } from '../core/interact.js';
+import { J } from '../core/joints.js';
 import type { CreatureId, CreatureShape } from '../core/library.js';
 import { HEART, Particles, SPARK } from '../core/particles.js';
 import type { GameEvent, Revealed } from './events.js';
@@ -63,9 +64,16 @@ export class Zoo {
     this.particles.update(dt);
   }
 
+  /** True when the worn creature's action is itself a thumb–index pinch (its voice, not a feed). */
+  private pinchIsVoice(worn: Worn | null, hand: HandShadow): boolean {
+    if (!worn || worn.side !== hand.side) return false;
+    const { a, b } = this.shapes.get(worn.species)!.actuator;
+    return (a === J.thumbTip && b === J.indexTip) || (a === J.indexTip && b === J.thumbTip);
+  }
+
   private feed(hands: readonly HandShadow[], worn: Worn | null, pool: Pool, events: GameEvent[]): void {
     for (const hand of hands) {
-      if (hand.pinch !== 'start' || (worn && worn.side === hand.side)) continue;
+      if (hand.pinch !== 'start' || this.pinchIsVoice(worn, hand)) continue;
       const firefly = this.fireflies.spawn(hand.tipX, hand.tipY, pool, this.rng);
       if (!firefly) continue;
       this.particles.emit(SPARK, firefly.x, firefly.y, 5, 0.12, this.rng);

@@ -66,7 +66,12 @@ export class AudioSystem extends createSystem({}) {
     this.player.head.getWorldQuaternion(this.q);
     this.f.set(0, 0, -1).applyQuaternion(this.q);
     this.engine.setListener(this.v.x, this.v.y, this.v.z, this.f.x, this.f.y, this.f.z);
-    for (const event of store.events) this.engine.play(soundFor(event), stageToWorld(stage, event.x, event.y));
+    for (const event of store.events) {
+      const sound = soundFor(event);
+      this.engine.play(sound, stageToWorld(stage, event.x, event.y));
+      // Dev-only trace so headless runs can verify gameplay sounds that cannot be heard.
+      if (import.meta.env.DEV) console.info(`[ShadowZoo] sound ${sound} (audio ${this.engine.ready ? 'on' : 'locked'})`);
+    }
     store.events.length = 0;
   }
 }

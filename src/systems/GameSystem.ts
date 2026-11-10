@@ -80,16 +80,18 @@ export class GameSystem extends createSystem({}) {
 
   private drawZoo(canvas: ShadowCanvas, stage: Stage): void {
     for (const creature of this.zoo.creatures) this.drawCreature(canvas, creature, stage);
+    // Glows scale with the shadow magnification so they read the same on near and far walls.
+    const m = this.magnification;
     for (const f of this.zoo.fireflies.list) {
       const flicker = 0.65 + 0.35 * Math.sin(f.age * 9 + f.seed);
-      canvas.addDot(f.x, f.y, 0.011, CH_GLOW, flicker);
-      canvas.addDot(f.x, f.y, 0.03, CH_GLOW, 0.18 * flicker);
+      canvas.addDot(f.x, f.y, 0.0034 * m, CH_GLOW, flicker);
+      canvas.addDot(f.x, f.y, 0.009 * m, CH_GLOW, 0.18 * flicker);
     }
     const p = this.zoo.particles;
     for (let i = 0; i < p.count; i++) {
       const k = p.life[i] / p.max[i];
-      if (p.kind[i] === HEART) this.drawHeart(canvas, p.x[i], p.y[i], 0.02, k);
-      else canvas.addDot(p.x[i], p.y[i], 0.002 + 0.008 * k, CH_GLOW, k);
+      if (p.kind[i] === HEART) this.drawHeart(canvas, p.x[i], p.y[i], 0.006 * m, k);
+      else canvas.addDot(p.x[i], p.y[i], (0.0006 + 0.0024 * k) * m, CH_GLOW, k);
     }
   }
 
@@ -103,7 +105,8 @@ export class GameSystem extends createSystem({}) {
     canvas.addCapsules(this.drawBuf, 0, shape.count, CH_SHADOW, 1);
     if (c.motion === 'dangle') {
       const top = stage.poolV * Math.sqrt(Math.max(0, 1 - (c.x / stage.poolU) ** 2));
-      canvas.addCapsule(c.x, y + c.size * 0.35, 0.0022, c.x, top, 0.0022, CH_SHADOW, 0.85);
+      const thread = 0.0007 * this.magnification;
+      canvas.addCapsule(c.x, y + c.size * 0.35, thread, c.x, top, thread, CH_SHADOW, 0.85);
     }
     if (c.eyeOpen > 0) {
       placePoint(shape.eye[0], shape.eye[1], cx, cy, c.x, y, scale, c.facing, this.point);
