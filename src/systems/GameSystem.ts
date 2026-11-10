@@ -41,6 +41,7 @@ export class GameSystem extends createSystem({}) {
   private stageVersion = -1;
   private time = 0;
   private magnification = 3;
+  private lastVisitor: string | null = null;
 
   init(): void {
     this.world.createTransformEntity(this.caption.mesh);
@@ -68,6 +69,9 @@ export class GameSystem extends createSystem({}) {
     // A pinch aimed at the menu is a click, not a firefly.
     if (store.uiHovered) for (const hand of this.hands) hand.pinch = null;
     const view = this.session.update(delta, this.hands, this.projector, this.pool, store.events);
+    const visitor = this.session.visitors.current?.def.id ?? null;
+    if (import.meta.env.DEV && visitor !== this.lastVisitor && visitor) console.info(`[ShadowZoo] visitor ${visitor}`);
+    this.lastVisitor = visitor;
     this.caption.show(view.caption);
     this.caption.update(delta);
     if (view.ghost) this.ghost.show(this.shapes.get(view.ghost)!.def, stage, this.session.settings.hand === 'left');
