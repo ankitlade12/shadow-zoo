@@ -8,7 +8,7 @@
 - **Division:** New Experience. The project was conceived and built after September 24, 2026.
 - **Platform:** Meta Quest 3 and 3S (WebXR, built with the Immersive Web SDK). It's fully usable with hands, controllers aren't needed, and it's designed for seated play.
 - **Build link:** PENDING. The GitHub Pages URL comes after the representative approves publishing.
-- **Video:** PENDING. Under 3 minutes, using footage from the IWSDK emulator (clearly labeled), or from a headset if one becomes available.
+- **Video:** recorded, `docs/video/shadow-zoo-demo.mp4` (1:36, IWSDK emulator footage, labeled on screen). It still needs uploading to YouTube or Vimeo for the submission link.
 
 ## Description
 
@@ -39,12 +39,17 @@ Shadow Zoo is built for coming back. Your zoo is saved on your device and greets
 - **Matching:** shapes are normalized for position and size, then compared with an overlap score plus a 64-direction radial signature. The signature finds the rotation and makes sure ears, jaws and legs are in the right places.
 - **Creatures:** creatures are hand shadows too. Each blends between a base pose and an action pose, with its own gait.
 - **Audio:** all sounds are synthesized live with the Web Audio API and placed on the wall in 3D.
-- **Quality:** 120+ automated tests cover the math, matching, progression, saving and the full session flow.
+- **Quality:** 130+ automated tests cover the math, matching, progression, saving and the full session flow. An emulator drill plays a fresh game with built-in hand poses and times every match.
 
 ## Challenges
 
 - **Telling creatures apart.** Hand silhouettes share a big palm blob, so a plain overlap score confused them; the swan and spider scored 0.83. Adding a radial signature brought the worst cross-creature score down to 0.27 while keeping every creature robust to hand size, rotation and noise.
 - **Finding the right wall.** In testing, a picture frame in front of the wall was detected as the "wall". The game now prefers real walls by size and semantic label.
+- **A crowded wall.**
+  - A creature cast by your hand is about half a meter across on a wall three meters away. With all six on the wall, they merged into one dark blob.
+  - The zoo now makes room. Each creature appears at the size you cast it, then everyone eases to a shared smaller size as the zoo grows. Walkers settle into the gaps between their neighbors.
+  - In simulation, overlapping pairs dropped from about 30% to under 10%.
+  - Shrinking exposed a real bug: fireflies hovered just out of reach of the smallest creatures. A regression test caught it, and fireflies now settle lower.
 - **No headset available.** Everything was built and verified in the IWSDK emulator's synthetic room with emulated hand tracking. Built-in emulator hand poses stood in for real hands to test that each creature can be matched.
 
 ## What's next
@@ -57,5 +62,8 @@ Shadow Zoo is built for coming back. Your zoo is saved on your device and greets
 ## Honest notes for judges
 
 - Tested in the IWSDK WebXR emulator. On-device frame rate and real-room behavior haven't been verified.
+- **The video is emulator footage, and it says so on screen.**
+  - The game is played by a script using built-in emulated hand poses.
+  - The emulator's screen capture has no audio, so the soundtrack was rebuilt offline from the game's own synthesized sound recipes. Each sound is placed at the moment and wall position where the game played it.
 - Never described as "the first" of anything. Hand-shadow games exist; the new part is shadows on your real wall that come alive and stay.
 - No personal data leaves the device.

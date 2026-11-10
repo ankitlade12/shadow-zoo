@@ -51,6 +51,24 @@ The dev server is managed by the IWSDK CLI. To test without a headset, use the e
 
 To develop with a fixed synthetic hand shape, set `VITE_TESTPOSE=rabbit` (or another creature) when starting the dev server.
 
+`scripts/drill.sh` plays a fresh game with built-in emulator poses and times each creature's match. `scripts/seed-save.mjs` loads a first-time, returning or full-zoo save into the emulator's browser.
+
+### Demo video
+
+The submission video is footage from the IWSDK emulator, and it says so on screen. To rebuild it:
+
+```bash
+./node_modules/.bin/iwsdk dev up --ai-mode agent --headless --allow-browser-automation --screenshot-width 1280 --screenshot-height 720
+bash scripts/demo.sh                                                    # plays and records the scripted demo
+./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
+python3 scripts/encode.py                                              # writes docs/video/shadow-zoo-demo.mp4
+```
+
+- **Scripted play.** `demo.sh` plays the game with built-in emulator hand poses, smooth hand motions and pinches. It also clicks "Light the lantern" for real. No game code is bypassed.
+- **Recording.** `record.mjs` records the page with the Chrome DevTools screencast. It connects to the dev server's local automation endpoint, so it has no time limit. It also streams the game's dev-mode console lines to a live log, which the demo script waits on.
+- **Audio.** The screencast captures no audio. `render-audio.mjs` rebuilds the soundtrack offline from the game's own sound recipes, placed at the moments and wall positions the game traced in dev mode.
+- **Encoding.** `encode.py` joins the segments, adds the chapter titles and an "emulator footage" label, and muxes the audio. It needs ffmpeg and Pillow.
+
 ## How it works
 
 ```
@@ -69,6 +87,10 @@ src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound
 - **Shadows.** Each tracked hand's 25 joints are projected from a virtual lantern onto the stage plane as tapered capsules. They're drawn into a small 2D mask once per frame, then composited over passthrough with a single wall-aligned quad.
 - **Matching.** The hand's shadow is normalized for position and size, then compared with each creature's silhouette. The comparison combines overlap (IoU) with a 64-direction radial signature, which finds the rotation and penalizes misplaced ears, jaws or legs. A short hold and a gently relaxing threshold keep it fair.
 - **Creatures.** Creatures are themselves hand shadows. Each one blends between its base pose and an action pose (ear twitch, jaw snap, tail fan, leg curl, head tuck) and moves with its own gait.
+- **A zoo that makes room.**
+  - A creature appears at the size your hand cast it. As the zoo fills, everyone eases to a shared smaller size, so six creatures still read as six animals.
+  - Walkers spread into the gaps between their neighbors.
+  - A creature holds still while your shadow rests on it.
 - **Audio.** All sound is synthesized with the Web Audio API and placed on the wall in 3D, so there are no audio assets.
 
 ## Privacy

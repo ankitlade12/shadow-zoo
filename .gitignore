@@ -10,8 +10,7 @@ coverage/
 .cursor/mcp.json
 .vscode/mcp.json
 .codex/config.toml
-docs/video/frames/
-docs/video/overlays/
-docs/video/stop
-docs/video/seed
-docs/video/*.log
+# Demo video scratch (frames, logs, soundtrack); only the final cut is kept.
+docs/video/*
+!docs/video/shadow-zoo-demo.mp4
+__pycache__/

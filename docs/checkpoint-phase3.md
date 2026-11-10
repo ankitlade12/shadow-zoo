@@ -45,3 +45,47 @@ All six creatures matched on the first try at Normal assist. `evidence/drill/zoo
 
 - Built-in emulator poses are clean and static. Real tracked hands jitter and vary between people, which is what the assist relaxation and the EMA smoothing are for. This still has to be confirmed on a headset.
 - Frame rate on Quest 3 is not measured here. Headless Chromium uses software rendering.
+
+# Demo video
+
+**Output:** `docs/video/shadow-zoo-demo.mp4`, 1:36 long. It is 1280×720 at 30 fps, H.264 video with AAC audio, peaking at -1 dBFS. A label at the bottom left says "IWSDK WebXR emulator footage · emulated hand tracking · no physical headset" for the whole video.
+
+**How it is made:**
+
+1. `scripts/demo.sh` plays the game in the emulator. It uses built-in hand poses, smooth wrist motions (`xr animate-to` with minimum-jerk easing), pinches and a real click on "Light the lantern". Every step waits on the game's own dev-mode console lines: visitor, reveal, eat, pet.
+2. `scripts/record.mjs` records it over the dev server's local DevTools endpoint.
+3. `scripts/render-audio.mjs` rebuilds the soundtrack offline from the game's own sound recipes.
+4. `scripts/encode.py` adds chapter titles, dips through black at each cut, and muxes the audio.
+
+**What the video shows, in order:**
+
+1. **The landing page.**
+2. **First light.** The hand's shadow appears on the wall, and the ghost hand demonstrates the rabbit.
+3. **The rabbit match.**
+4. **Feeding:** two pinches, and the rabbit eats.
+5. **Petting.**
+6. **Two more visitors:** the dog and the crocodile.
+7. **Wearing the dog.** Three barks; three prey creatures flee.
+8. **The next day:** "Welcome back! 3 nights in a row" over a full zoo.
+9. **The daily big visitor.** The hand moves toward the light and the shadow grows.
+10. **A group trick.** One resting shadow pets four three-heart creatures.
+11. **The hands-only menu:** Assist cycles from Normal to Expert to Gentle.
+12. **The end card.**
+
+## Problems solved while making it
+
+1. **A recording limit and stalled log queries.**
+   - IWSDK caps a `browser run` script at 110 s.
+   - While one ran, `browser logs` calls sometimes hung for 15 s: 1 in 25 in a stress test.
+   - **Fix.** The recorder connects to the automation endpoint directly, so it has no limit and holds no lease. It streams the game's console lines to `docs/video/live.log`, which the choreography reads.
+2. **The choreography stalled.** A bare `wait` in a helper also waited on the background recorder. Helpers now wait on their own job.
+3. **Dev chrome in the frame.**
+   - The workspace toolbar is hidden with injected CSS. It isn't part of the game.
+   - The recording pauses over page loads and XR setup. This keeps out the dev server's editor loading screen, which shows for about 7 s after a reload, and the unframed first XR frames.
+4. **A wide-angle view.** The emulator's default 90° vertical FOV on a 16:9 page shows about 120° horizontally, so the wall looked small. The video sets FOV 64 through `xr set-device-state`, which is close to a Quest eye's horizontal span. Setting `window.IWER_DEVICE.fovy` has no effect.
+5. **Static pages and drifting audio.**
+   - A static page sends no screencast frames, so each segment records its stop time.
+   - Gaps between frames are kept at their real length; capping them had pulled the video 1.8 s ahead of the audio.
+6. **No audio in the screencast.**
+   - The soundtrack is rendered offline with the same recipes, HRTF placement and voice limiter, at the traced times and wall positions.
+   - The night ambience starts with the stage, often while recording is paused. It is restored from the live log at each segment start.

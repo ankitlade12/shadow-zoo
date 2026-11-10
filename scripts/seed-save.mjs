@@ -8,37 +8,41 @@
 //   full       all six creatures, today's visitor already matched: just the zoo
 const KEY = 'shadowzoo.save.v1';
 
-export default async function run({ page }) {
-  const seed = process.env.SEED ?? 'returning';
+/** Writes the save for `mode` into the page's localStorage and reloads the page. */
+export async function seed(page, mode) {
   const result = await page.evaluate(
-    ([key, seed]) => {
+    ([key, mode]) => {
       const pad = (n) => String(n).padStart(2, '0');
       const day = (offset) => {
         const d = new Date();
         d.setDate(d.getDate() + offset);
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
       };
-      if (seed === 'fresh') {
+      if (mode === 'fresh') {
         localStorage.removeItem(key);
-        return { seed };
+        return { seed: mode };
       }
-      const today = seed === 'full';
+      const today = mode === 'full';
       const save = {
         version: 1,
         unlocked: ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'],
-        bonds: { rabbit: 3, dog: 2, crocodile: 1, peacock: 1, spider: 1, turtle: 2 },
+        bonds: { rabbit: 3, dog: 3, crocodile: 3, peacock: 3, spider: 3, turtle: 3 },
         stars: { rabbit: 3, dog: 3, crocodile: 2, peacock: 2, spider: 3, turtle: 2 },
         embers: today ? 3 : 2,
         streak: today ? 3 : 2,
         lastDay: day(today ? 0 : -1),
-        dailyDone: today ? day(0) : day(-1),
+        dailyDone: day(today ? 0 : -1),
         settings: { assist: 'normal', hand: 'auto', sound: true, reducedMotion: false, narrow: false },
       };
       localStorage.setItem(key, JSON.stringify(save));
-      return { seed, lastDay: save.lastDay };
+      return { seed: mode, lastDay: save.lastDay };
     },
-    [KEY, seed],
+    [KEY, mode],
   );
   await page.reload();
   return result;
+}
+
+export default async function run({ page }) {
+  return seed(page, process.env.SEED ?? 'returning');
 }
