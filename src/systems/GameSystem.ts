@@ -65,6 +65,8 @@ export class GameSystem extends createSystem({}) {
       const sample = store.hands[hand.side];
       updateHandShadow(hand, sample.tracked ? sample.joints : null, this.projector, delta);
     }
+    // A pinch aimed at the menu is a click, not a firefly.
+    if (store.uiHovered) for (const hand of this.hands) hand.pinch = null;
     const view = this.session.update(delta, this.hands, this.projector, this.pool, store.events);
     this.caption.show(view.caption);
     this.caption.update(delta);

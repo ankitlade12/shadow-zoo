@@ -17,6 +17,8 @@ export const store = {
   stageVersion: 0,
   narrow: false,
   relightRequested: false,
+  /** True while a hand ray hovers the menu: pinches are clicks, not fireflies. */
+  uiHovered: false,
   canvas: null as ShadowCanvas | null,
   /** The running game session (menu and audio read settings from it). */
   session: null as Session | null,

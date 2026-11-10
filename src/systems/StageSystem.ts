@@ -32,7 +32,7 @@ export class StageSystem extends createSystem({ planes: { required: [XRPlane] } 
     const wall = chooseWall(this.collectPlanes(), head);
     this.waited += delta;
     if (!wall && this.waited < PLANE_WAIT && !store.relightRequested) return;
-    store.stage = buildStage(head, wall, { narrow: store.narrow });
+    store.stage = buildStage(head, wall, { narrow: store.session?.settings.narrow ?? store.narrow });
     store.stageVersion++;
     store.relightRequested = false;
     this.waited = 0;

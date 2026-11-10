@@ -1,0 +1,62 @@
+<style>
+  .menu {
+    flex-direction: column;
+    width: 440px;
+  }
+
+  .head {
+    flex-direction: column;
+    gap: 4px;
+    padding-left: 24px;
+    padding-right: 24px;
+    padding-top: 22px;
+    padding-bottom: 10px;
+  }
+
+  .title {
+    color: #1c1d20;
+    font-size: 30px;
+    font-weight: 700;
+  }
+
+  .title:dark {
+    color: #ffe9c7;
+  }
+
+  .sub {
+    color: #3a3b40;
+    font-size: 18px;
+  }
+
+  .sub:dark {
+    color: #dccfb8;
+  }
+
+  .rows {
+    flex-direction: column;
+    gap: 10px;
+    padding-left: 22px;
+    padding-right: 22px;
+    padding-bottom: 22px;
+  }
+
+  .row {
+    justify-content: flex-start;
+  }
+</style>
+<Panel class="menu">
+  <div class="head">
+    <div class="title">Shadow Zoo</div>
+    <div class="sub">Pinch a button to change it</div>
+  </div>
+  <div class="rows">
+    <Button id="assist" class="row"><ButtonLabel id="assist-label">Assist: Normal</ButtonLabel></Button>
+    <Button id="hand" class="row"><ButtonLabel id="hand-label">Hand: Auto</ButtonLabel></Button>
+    <Button id="sound" class="row"><ButtonLabel id="sound-label">Sound: On</ButtonLabel></Button>
+    <Button id="motion" class="row"><ButtonLabel id="motion-label">Motion: Full</ButtonLabel></Button>
+    <Button id="view" class="row"><ButtonLabel id="view-label">View: Wide</ButtonLabel></Button>
+    <Button id="relight" class="row"><ButtonLabel id="relight-label">Re-light the wall I face</ButtonLabel></Button>
+    <Button id="reset" class="row"><ButtonLabel id="reset-label">Reset zoo</ButtonLabel></Button>
+    <Button id="close" class="row"><ButtonLabel id="close-label">Close</ButtonLabel></Button>
+  </div>
+</Panel>

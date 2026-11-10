@@ -53,6 +53,7 @@ export class SoundSystem extends createSystem({}) {
 
   update(): void {
     const stage = store.stage;
+    this.engine.setMuted(!(store.session?.settings.sound ?? true));
     if (!stage) {
       store.events.length = 0;
       return;
