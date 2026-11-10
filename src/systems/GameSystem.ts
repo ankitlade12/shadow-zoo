@@ -70,7 +70,10 @@ export class GameSystem extends createSystem({}) {
     if (store.uiHovered) for (const hand of this.hands) hand.pinch = null;
     const view = this.session.update(delta, this.hands, this.projector, this.pool, store.events);
     const visitor = this.session.visitors.current?.def.id ?? null;
-    if (import.meta.env.DEV && visitor !== this.lastVisitor && visitor) console.info(`[ShadowZoo] visitor ${visitor}`);
+    if (import.meta.env.DEV && visitor !== this.lastVisitor && visitor) {
+      const { minSize, hold } = this.session.visitors.options;
+      console.info(`[ShadowZoo] visitor ${visitor}${minSize ? ' big' : ''}${hold ? ' steady' : ''}`);
+    }
     this.lastVisitor = visitor;
     this.caption.show(view.caption);
     this.caption.update(delta);

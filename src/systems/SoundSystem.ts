@@ -23,6 +23,8 @@ function soundFor(event: GameEvent): SoundName {
   }
 }
 
+const fmt = (v: Vec3): string => v.map((n) => n.toFixed(2)).join(' ');
+
 const stageToWorld = (s: Stage, x: number, y: number): Vec3 => [
   s.origin[0] + s.u[0] * x + s.v[0] * y,
   s.origin[1] + s.u[1] * x + s.v[1] * y,
@@ -36,6 +38,7 @@ export class SoundSystem extends createSystem({}) {
   private readonly f = new Vector3();
   private readonly q = new Quaternion();
   private ambientFor = -1;
+  private tracedStage = -1;
 
   init(): void {
     const unlock = (): void => this.engine.unlock();
@@ -48,6 +51,8 @@ export class SoundSystem extends createSystem({}) {
     this.renderer.xr.addEventListener('sessionend', () => {
       this.engine.stopAmbient();
       this.ambientFor = -1;
+      this.tracedStage = -1;
+      if (import.meta.env.DEV) console.info('[ShadowZoo] ambient stop');
     });
   }
 
@@ -63,15 +68,22 @@ export class SoundSystem extends createSystem({}) {
       this.engine.startAmbient(stage.origin);
       this.ambientFor = store.stageVersion;
     }
+    // Dev-only traces (here and below) let headless runs check the sounds nobody can hear, and let
+    // scripts/render-audio.mjs rebuild a recording's soundtrack from the game's own recipes.
+    if (import.meta.env.DEV && this.tracedStage !== store.stageVersion) {
+      this.tracedStage = store.stageVersion;
+      console.info(`[ShadowZoo] ambient start @ ${fmt(stage.origin)}`);
+    }
     this.player.head.getWorldPosition(this.v);
     this.player.head.getWorldQuaternion(this.q);
     this.f.set(0, 0, -1).applyQuaternion(this.q);
     this.engine.setListener(this.v.x, this.v.y, this.v.z, this.f.x, this.f.y, this.f.z);
+    const muted = !(store.session?.settings.sound ?? true);
     for (const event of store.events) {
       const sound = soundFor(event);
-      this.engine.play(sound, stageToWorld(stage, event.x, event.y));
-      // Dev-only trace so headless runs can verify gameplay sounds that cannot be heard.
-      if (import.meta.env.DEV) console.info(`[ShadowZoo] sound ${sound} (audio ${this.engine.ready ? 'on' : 'locked'})`);
+      const at = stageToWorld(stage, event.x, event.y);
+      this.engine.play(sound, at);
+      if (import.meta.env.DEV) console.info(`[ShadowZoo] sound ${sound} (audio ${muted ? 'muted' : this.engine.ready ? 'on' : 'locked'}) @ ${fmt(at)}`);
     }
     store.events.length = 0;
   }

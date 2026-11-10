@@ -120,6 +120,24 @@ describe('Zoo', () => {
     expect(creature.bond).toBe(1);
   });
 
+  it('a creature stays put while your shadow rests on it, so it can be petted again', () => {
+    const { zoo, events, creature } = freshZoo('rabbit');
+    step(zoo, 1.5, [], events);
+    const x0 = creature.x;
+    const y = creature.y;
+    const hand = createHandShadow('left');
+    hand.tracked = true;
+    hand.count = 1;
+    hand.caps.set([x0 - 0.02, y, 0.03, x0 + 0.02, y, 0.03]);
+    let drift = 0;
+    for (let t = 0; t < 6; t += 1 / 60) {
+      zoo.update(1 / 60, pool, [hand], null, events);
+      drift = Math.max(drift, Math.abs(creature.x - x0));
+    }
+    expect(drift).toBeLessThan(0.02);
+    expect(events.filter((e) => e.type === 'pet').length).toBeGreaterThanOrEqual(2);
+  });
+
   it('wearing the dog and barking makes rabbits flee', () => {
     const { zoo, events, creature } = freshZoo('rabbit', 0.1);
     step(zoo, 1.5, [], events);

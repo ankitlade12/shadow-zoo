@@ -177,6 +177,12 @@ export class Creature {
     this.fireflyId = -1;
   }
 
+  /** A hand shadow is resting on it: it stops wandering and keeps resting while the touch lasts. */
+  stay(): void {
+    if (this.mode === 'wander') this.settle();
+    if (this.mode === 'rest') this.timer = Math.max(this.timer, 0.4);
+  }
+
   /** Stops chasing or fleeing. */
   calm(): void {
     if (this.mode === 'chase' || this.mode === 'flee') this.settle();

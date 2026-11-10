@@ -155,11 +155,6 @@ export class Zoo {
   }
 
   private updatePet(c: Creature, dt: number, hands: readonly HandShadow[], events: GameEvent[]): void {
-    let t = this.petTimers.get(c.id) ?? 0;
-    if (t < 0) {
-      this.petTimers.set(c.id, Math.min(0, t + dt));
-      return;
-    }
     let touching = false;
     if (c.mode === 'rest' || c.mode === 'wander') {
       const cy = c.y + c.lift;
@@ -170,6 +165,13 @@ export class Zoo {
           break;
         }
       }
+    }
+    // A creature under a resting hand shadow stays put, even between pets.
+    if (touching) c.stay();
+    let t = this.petTimers.get(c.id) ?? 0;
+    if (t < 0) {
+      this.petTimers.set(c.id, Math.min(0, t + dt));
+      return;
     }
     t = touching ? t + dt : 0;
     if (t >= PET_SECONDS) {
