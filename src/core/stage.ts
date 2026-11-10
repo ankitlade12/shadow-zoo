@@ -7,6 +7,8 @@ export interface PlaneInfo {
   readonly normal: Vec3;
   readonly polygon: readonly Vec3[];
   readonly vertical: boolean;
+  /** WebXR semantic label when the runtime provides one ('wall', 'wall art', 'window', ...). */
+  readonly label?: string;
 }
 
 export interface HeadPose {
@@ -64,10 +66,22 @@ function extents(polygon: readonly Vec3[], origin: Vec3, axis: Vec3): [number, n
   return [lo, hi];
 }
 
-/** The nearest vertical plane that the horizontal gaze ray hits, facing the player, 0.6–4.5 m away. */
+/** Planes at least this wide and tall count as walls when no semantic label says so (pictures, TVs and doors don't). */
+const MIN_WALL_WIDTH = 1.0;
+const MIN_WALL_HEIGHT = 1.5;
+
+interface WallCandidate extends WallHit {
+  readonly large: boolean;
+}
+
+/**
+ * The vertical plane the horizontal gaze ray hits, facing the player, 0.6–4.5 m away. Planes
+ * labeled 'wall' win; otherwise large planes win over small ones (pictures, windows, screens).
+ * Among the preferred group the nearest is chosen.
+ */
 export function chooseWall(planes: readonly PlaneInfo[], head: HeadPose): WallHit | null {
   const f = horizontalForward(head.forward);
-  let best: WallHit | null = null;
+  const candidates: WallCandidate[] = [];
   for (const plane of planes) {
     if (!plane.vertical) continue;
     let n = normalize([plane.normal[0], 0, plane.normal[2]]);
@@ -80,9 +94,16 @@ export function chooseWall(planes: readonly PlaneInfo[], head: HeadPose): WallHi
     const hit = add(head.position, scale(f, distance));
     const [lo, hi] = extents(plane.polygon, hit, normalize(cross(UP, n)));
     if (lo > -EDGE_MARGIN || hi < EDGE_MARGIN) continue;
-    if (!best || distance < best.distance) best = { plane, hit, normal: n, distance };
+    const [bottom, top] = extents(plane.polygon, hit, UP);
+    const large = hi - lo >= MIN_WALL_WIDTH && top - bottom >= MIN_WALL_HEIGHT;
+    candidates.push({ plane, hit, normal: n, distance, large });
   }
-  return best;
+  const labeled = candidates.filter((c) => c.plane.label === 'wall');
+  const large = candidates.filter((c) => c.large);
+  const pool = labeled.length > 0 ? labeled : large.length > 0 ? large : candidates;
+  let best: WallCandidate | null = null;
+  for (const c of pool) if (!best || c.distance < best.distance) best = c;
+  return best && { plane: best.plane, hit: best.hit, normal: best.normal, distance: best.distance };
 }
 
 /** Builds the stage on the chosen wall, or on a paper screen in front of the player. */

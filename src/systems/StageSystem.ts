@@ -5,6 +5,7 @@ import { store } from '../runtime/store.js';
 
 interface XRPlaneLike {
   readonly orientation?: string;
+  readonly semanticLabel?: string;
   readonly polygon: ReadonlyArray<{ x: number; y: number; z: number }>;
 }
 
@@ -35,6 +36,11 @@ export class StageSystem extends createSystem({ planes: { required: [XRPlane] } 
     store.stageVersion++;
     store.relightRequested = false;
     this.waited = 0;
+    if (import.meta.env.DEV) {
+      const s = store.stage;
+      const r = (v: number) => Math.round(v * 100) / 100;
+      console.info('[ShadowZoo] stage', JSON.stringify({ fallback: s.fallback, distance: r(s.distance), poolU: r(s.poolU), poolV: r(s.poolV), origin: s.origin.map(r), n: s.n.map(r), head: head.position.map(r), planes: this.queries.planes.entities.size }));
+    }
   }
 
   private headPose(): HeadPose {
@@ -59,7 +65,13 @@ export class StageSystem extends createSystem({ planes: { required: [XRPlane] } 
         const w = new Vector3(p.x, p.y, p.z).applyMatrix4(m);
         return [w.x, w.y, w.z];
       });
-      planes.push({ center: [c.x, c.y, c.z], normal: [n.x, n.y, n.z], polygon, vertical: plane.orientation === 'vertical' });
+      planes.push({
+        center: [c.x, c.y, c.z],
+        normal: [n.x, n.y, n.z],
+        polygon,
+        vertical: plane.orientation === 'vertical',
+        label: plane.semanticLabel,
+      });
     }
     return planes;
   }

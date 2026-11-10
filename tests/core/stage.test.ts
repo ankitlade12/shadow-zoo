@@ -32,6 +32,22 @@ describe('chooseWall', () => {
     expect(chooseWall([offToSide], head)).toBeNull();
   });
 
+  it('prefers the wall over a picture hanging just in front of it', () => {
+    const picture: PlaneInfo = {
+      center: [0, 1.6, -1.98],
+      normal: [0, 0, 1],
+      vertical: true,
+      polygon: [[-0.6, 1.2, -1.98], [0.6, 1.2, -1.98], [0.6, 2, -1.98], [-0.6, 2, -1.98]],
+    };
+    expect(chooseWall([picture, wall(-2)], head)!.distance).toBeCloseTo(2);
+    expect(chooseWall([{ ...picture, label: 'wall art' }, { ...wall(-2), label: 'wall' }], head)!.plane.label).toBe('wall');
+  });
+
+  it('still uses a small plane when nothing larger qualifies', () => {
+    const panel: PlaneInfo = { center: [0, 1.3, -2], normal: [0, 0, 1], vertical: true, polygon: [[-0.4, 0.9, -2], [0.4, 0.9, -2], [0.4, 1.7, -2], [-0.4, 1.7, -2]] };
+    expect(chooseWall([panel], head)).not.toBeNull();
+  });
+
   it('prefers the nearest wall along the gaze', () => {
     expect(chooseWall([wall(-3.5), wall(-1.5)], head)!.distance).toBeCloseTo(1.5);
   });
