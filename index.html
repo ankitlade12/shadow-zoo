@@ -2,12 +2,150 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Make shadow puppets with your hands on your real wall, and watch them come alive. A hands-first mixed reality game for Meta Quest."
+    />
+    <meta name="theme-color" content="#1b120c" />
     <link rel="icon" href="data:," />
     <title>Shadow Zoo</title>
+    <style>
+      :root {
+        --ink: #ffe9c7;
+        --muted: #d9c3a3;
+        --glow: #ffc27a;
+        --bg0: #120c08;
+        --bg1: #2a1a10;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg0);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      }
+      #scene-container {
+        position: fixed;
+        inset: 0;
+      }
+      #landing {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        box-sizing: border-box;
+        overflow: auto;
+        background:
+          radial-gradient(60% 50% at 50% 36%, rgba(255, 194, 122, 0.28), rgba(255, 194, 122, 0) 70%),
+          linear-gradient(180deg, var(--bg1), var(--bg0));
+      }
+      #landing[hidden] {
+        display: none;
+      }
+      .card {
+        max-width: 640px;
+        text-align: center;
+      }
+      h1 {
+        font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+        font-weight: 600;
+        font-size: clamp(44px, 9vw, 84px);
+        margin: 0 0 8px;
+        letter-spacing: 0.5px;
+        text-shadow: 0 0 40px rgba(255, 194, 122, 0.35);
+      }
+      .tagline {
+        font-size: clamp(18px, 3.2vw, 24px);
+        line-height: 1.45;
+        color: var(--muted);
+        margin: 0 auto 28px;
+        max-width: 30ch;
+      }
+      ol {
+        list-style: none;
+        padding: 0;
+        margin: 0 auto 32px;
+        display: grid;
+        gap: 14px;
+        text-align: left;
+        max-width: 460px;
+      }
+      li {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 14px;
+        align-items: center;
+        font-size: 18px;
+        line-height: 1.4;
+      }
+      .n {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 194, 122, 0.14);
+        color: var(--glow);
+        font-weight: 700;
+      }
+      #start {
+        font: inherit;
+        font-size: 22px;
+        font-weight: 700;
+        color: #26170c;
+        background: var(--glow);
+        border: 0;
+        border-radius: 999px;
+        padding: 18px 40px;
+        min-width: 260px;
+        min-height: 64px;
+        cursor: pointer;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.3s ease;
+      }
+      #start:hover,
+      #start:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 0 36px 4px rgba(255, 194, 122, 0.45);
+        outline: none;
+      }
+      .note {
+        margin-top: 18px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      .fine {
+        margin-top: 28px;
+        font-size: 13px;
+        color: rgba(217, 195, 163, 0.75);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #start {
+          transition: none;
+        }
+      }
+    </style>
   </head>
-  <body style="margin: 0; background: #120d0a">
+  <body>
     <div id="scene-container"></div>
+    <main id="landing">
+      <div class="card">
+        <h1>Shadow Zoo</h1>
+        <p class="tagline">Make shadow puppets with your hands on your real wall, and watch them come alive.</p>
+        <ol>
+          <li><span class="n">1</span><span>Sit facing a wall in a lit room and put your controllers down.</span></li>
+          <li><span class="n">2</span><span>Shape your hand until its shadow fits the glowing outline.</span></li>
+          <li><span class="n">3</span><span>Pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
+        </ol>
+        <button id="start" type="button">Light the lantern</button>
+        <p class="note" id="support">Made for Meta Quest 3 and 3S. Hands only, seated.</p>
+        <p class="fine">Your zoo is saved only on this device. No accounts, no tracking.</p>
+      </div>
+    </main>
     <script type="module" src="/src/index.ts"></script>
   </body>
 </html>

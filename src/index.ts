@@ -6,6 +6,7 @@ import { HandSystem } from './systems/HandSystem.js';
 import { MenuSystem } from './systems/MenuSystem.js';
 import { RenderSystem } from './systems/RenderSystem.js';
 import { StageSystem } from './systems/StageSystem.js';
+import { mountLanding } from './ui/landing.js';
 
 World.create(document.getElementById('scene-container') as HTMLDivElement, projectOptions).then((world) => {
   world
@@ -15,4 +16,5 @@ World.create(document.getElementById('scene-container') as HTMLDivElement, proje
     .registerSystem(GameSystem, { priority: 10 })
     .registerSystem(RenderSystem, { priority: 25 })
     .registerSystem(SoundSystem, { priority: 30 });
+  mountLanding(world);
 });
