@@ -24,6 +24,7 @@ export class Zoo {
   private readonly petTimers = new Map<number, number>();
   private readonly creatureEvents: CreatureEvent[] = [];
   private nextId = 1;
+  private motionScale = 1;
 
   constructor(
     private readonly shapes: ReadonlyMap<CreatureId, CreatureShape>,
@@ -34,14 +35,40 @@ export class Zoo {
     return this.unlockedSet;
   }
 
-  add(revealed: Revealed, events: GameEvent[]): Creature {
+  add(revealed: Revealed, events: GameEvent[], options: { readonly silent?: boolean; readonly bond?: number } = {}): Creature {
     const def = this.shapes.get(revealed.species)!.def;
     const creature = new Creature(this.nextId++, revealed.species, def.motion, revealed.x, revealed.y, revealed.scale, revealed.size, this.rng);
+    creature.bond = options.bond ?? 0;
+    creature.motionScale = this.motionScale;
     this.creatures.push(creature);
     this.unlockedSet.add(revealed.species);
-    this.particles.emit(SPARK, revealed.x, revealed.y, 16, revealed.size * 0.9, this.rng);
-    events.push({ type: 'reveal', species: revealed.species, x: revealed.x, y: revealed.y });
+    if (!options.silent) {
+      this.particles.emit(SPARK, revealed.x, revealed.y, 16, revealed.size * 0.9, this.rng);
+      events.push({ type: 'reveal', species: revealed.species, x: revealed.x, y: revealed.y });
+    }
     return creature;
+  }
+
+  /** Today's visitor matched: the zoo's creature of that species cheers. */
+  cheer(species: CreatureId, x: number, y: number, events: GameEvent[]): void {
+    for (const c of this.creatures) {
+      if (c.species !== species) continue;
+      c.pet();
+      this.particles.emit(HEART, c.x, c.y + c.size * 0.45, 4, c.size * 0.5, this.rng);
+    }
+    this.particles.emit(SPARK, x, y, 16, 0.3, this.rng);
+    events.push({ type: 'reveal', species, x, y });
+  }
+
+  /** Star sparkles for a matched visitor: more stars, more sparkle. */
+  celebrate(x: number, y: number, stars: number, size: number): void {
+    this.particles.emit(SPARK, x, y, stars * 5, size * 0.7, this.rng);
+  }
+
+  /** Reduced motion: scales hops and bounces for every creature, present and future. */
+  setMotionScale(scale: number): void {
+    this.motionScale = scale;
+    for (const c of this.creatures) c.motionScale = scale;
   }
 
   update(dt: number, pool: Pool, hands: readonly HandShadow[], worn: Worn | null, events: GameEvent[]): void {
@@ -132,8 +159,8 @@ export class Zoo {
     }
     t = touching ? t + dt : 0;
     if (t >= PET_SECONDS) {
-      c.pet();
       c.bond = Math.min(MAX_BOND, c.bond + 1);
+      c.pet();
       this.particles.emit(HEART, c.x, c.y + c.size * 0.45, 3, c.size * 0.5, this.rng);
       events.push({ type: 'pet', species: c.species, x: c.x, y: c.y });
       t = -PET_COOLDOWN;

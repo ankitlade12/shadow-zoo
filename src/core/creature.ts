@@ -16,6 +16,7 @@ export interface CreatureEvent {
 /** Walking speed per motion style, in body sizes per second. */
 const SPEED: Readonly<Record<Motion, number>> = { hop: 1.2, trot: 1.5, slither: 0.8, strut: 0.7, dangle: 0.9, creep: 0.3 };
 const APPEAR_TIME = 0.8;
+const TRICK_TIME = 0.9;
 
 /** The line that walking creatures' silhouette centers follow, below the middle of the pool. */
 export const groundY = (pool: Pool): number => -0.5 * pool.v;
@@ -28,6 +29,7 @@ export function halfWidthAt(pool: Pool, y: number): number {
 
 const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
 const easeOut = (k: number): number => 1 - (1 - k) ** 3;
+const easeInOut = (k: number): number => (k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2);
 
 function gaitLift(motion: Motion, t: number, size: number): number {
   switch (motion) {
@@ -80,6 +82,11 @@ export class Creature {
   /** Hearts earned (0–5). */
   bond = 0;
   fireflyId = -1;
+  /** Trick rotation in radians (0 when not performing). */
+  spin = 0;
+  /** 1 = full motion; lower values calm hops and bounces (reduced motion). */
+  motionScale = 1;
+  private trickTime = 0;
   private timer = APPEAR_TIME;
   private phase = 0;
   private targetX: number;
@@ -135,6 +142,7 @@ export class Creature {
     if (this.mode === 'rest' || this.mode === 'wander' || this.mode === 'happy') {
       this.mode = 'happy';
       this.timer = 1.1;
+      if (this.bond >= 3) this.trickTime = TRICK_TIME;
     }
   }
 
@@ -160,6 +168,10 @@ export class Creature {
   update(dt: number, pool: Pool, events: CreatureEvent[]): void {
     this.phase += dt;
     this.blink(dt);
+    if (this.trickTime > 0) {
+      this.trickTime = Math.max(0, this.trickTime - dt);
+      this.spin = this.trickTime > 0 ? Math.PI * 2 * easeInOut(1 - this.trickTime / TRICK_TIME) : 0;
+    }
     switch (this.mode) {
       case 'appear':
         this.appear(dt, pool);
@@ -190,6 +202,8 @@ export class Creature {
       default:
         this.move(dt, pool);
     }
+    this.lift *= this.motionScale;
+    this.bounce = 1 + (this.bounce - 1) * this.motionScale;
     this.keepInside(pool);
   }
 

@@ -80,4 +80,31 @@ describe('Creature', () => {
     }
     expect(blinked).toBe(true);
   });
+
+  it('does a spin trick when petted with three or more hearts', () => {
+    const c = make('trot');
+    run(c, 1);
+    c.mode = 'rest';
+    c.bond = 3;
+    c.pet();
+    run(c, 0.45);
+    expect(c.spin).toBeGreaterThan(0.5);
+    expect(c.spin).toBeLessThan(Math.PI * 2);
+    run(c, 0.6);
+    expect(c.spin).toBe(0);
+  });
+
+  it('hops lower with reduced motion', () => {
+    const peak = (scale: number) => {
+      const c = make('hop', 0, 0, 5);
+      c.motionScale = scale;
+      let max = 0;
+      for (let i = 0; i < 60 * 20; i++) {
+        c.update(1 / 60, pool, []);
+        max = Math.max(max, c.lift);
+      }
+      return max;
+    };
+    expect(peak(0.35)).toBeLessThan(peak(1) * 0.5);
+  });
 });

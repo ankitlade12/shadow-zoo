@@ -39,3 +39,30 @@ export function placePoint(px: number, py: number, cx: number, cy: number, x: nu
   out.x = (px - cx) * scale * facing + x;
   out.y = (py - cy) * scale + y;
 }
+
+/** Rotates capsule endpoints in place by `angle` around (ox, oy); radii are unchanged. */
+export function rotateCapsules(caps: Float32Array, count: number, angle: number, ox: number, oy: number): void {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  for (let i = 0; i < count; i++) {
+    const o = i * CAPSULE_STRIDE;
+    let x = caps[o] - ox;
+    let y = caps[o + 1] - oy;
+    caps[o] = x * c - y * s + ox;
+    caps[o + 1] = x * s + y * c + oy;
+    x = caps[o + 3] - ox;
+    y = caps[o + 4] - oy;
+    caps[o + 3] = x * c - y * s + ox;
+    caps[o + 4] = x * s + y * c + oy;
+  }
+}
+
+/** Rotates a point in place by `angle` around (ox, oy). */
+export function rotatePoint(p: Point, angle: number, ox: number, oy: number): void {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const x = p.x - ox;
+  const y = p.y - oy;
+  p.x = x * c - y * s + ox;
+  p.y = x * s + y * c + oy;
+}
