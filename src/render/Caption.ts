@@ -34,7 +34,7 @@ export class Caption {
     this.texture.colorSpace = SRGBColorSpace;
     this.material = new MeshBasicMaterial({ map: this.texture, transparent: true, depthWrite: false, opacity: 0 });
     this.mesh = new Mesh(new PlaneGeometry(1, 1), this.material);
-    this.mesh.renderOrder = 11;
+    this.mesh.renderOrder = -9;
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
   }

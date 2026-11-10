@@ -161,7 +161,8 @@ export class ShadowCanvas {
     });
     this.composite = new Mesh(new PlaneGeometry(1, 1), this.compositeMaterial);
     this.composite.frustumCulled = false;
-    this.composite.renderOrder = 10;
+    // Drawn before other transparent objects so spatial UI panels always land on top of the stage.
+    this.composite.renderOrder = -10;
   }
 
   /** Sizes the mask and places the composite quad on the stage. */

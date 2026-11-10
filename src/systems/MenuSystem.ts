@@ -4,10 +4,17 @@ import { ConfirmGuard, cycleSetting, settingLabel, type SettingKey } from '../ga
 import { store } from '../runtime/store.js';
 
 const KEYS: readonly SettingKey[] = ['assist', 'hand', 'sound', 'motion', 'view'];
+
+interface TextHolder {
+  setProperties(properties: { text: string }): void;
+  children?: readonly unknown[];
+}
 /** World width of the settings panel near the player (meters). */
 const MENU_WIDTH = 0.36;
 /** Chip width as a fraction of the wall distance (about 4 degrees). */
-const CHIP_ANGLE = 0.07;
+const CHIP_ANGLE = 0.09;
+/** The menu markup is 440 UIKit units wide; UIKit units are centimeters. */
+const MENU_FALLBACK_WIDTH = 4.4;
 
 /** The wall "Menu" chip and the settings panel it opens near the player. */
 export class MenuSystem extends createSystem({}) {
@@ -16,10 +23,10 @@ export class MenuSystem extends createSystem({}) {
   private chipEntity: Entity | null = null;
   private menuEntity: Entity | null = null;
   private chipWidth = 1;
-  private menuWidth = 1;
   private readonly guard = new ConfirmGuard(4);
   private readonly head = new Vector3();
   private readonly forward = new Vector3();
+  private readonly size = new Vector3();
   private stageVersion = -1;
   private time = 0;
   private open = false;
@@ -33,7 +40,6 @@ export class MenuSystem extends createSystem({}) {
     const chip = await this.world.assets.instantiate<UIKitMLAsset>('menu-chip');
     const menu = await this.world.assets.instantiate<UIKitMLAsset>('menu-panel');
     this.chipWidth = Math.max(0.01, new Box3().setFromObject(chip).getSize(new Vector3()).x);
-    this.menuWidth = Math.max(0.01, new Box3().setFromObject(menu).getSize(new Vector3()).x);
     this.chipEntity = this.world.createTransformEntity(chip);
     this.chipEntity.addComponent(RayInteractable);
     this.menuEntity = this.world.createTransformEntity(menu);
@@ -106,7 +112,12 @@ export class MenuSystem extends createSystem({}) {
     this.forward.multiplyScalar(-1);
     menu.position.set(this.head.x + this.forward.x * 0.55, this.head.y - 0.18, this.head.z + this.forward.z * 0.55);
     menu.rotation.set(0, Math.atan2(this.head.x - menu.position.x, this.head.z - menu.position.z), 0);
-    menu.scale.setScalar(MENU_WIDTH / this.menuWidth);
+    // Measure once laid out (UIKit lays panels out after instantiation); fall back to the markup width.
+    menu.scale.setScalar(1);
+    menu.updateMatrixWorld(true);
+    const measured = new Box3().setFromObject(menu).getSize(this.size).x;
+    const width = measured > 0.5 && measured < 20 ? measured : MENU_FALLBACK_WIDTH;
+    menu.scale.setScalar(MENU_WIDTH / width);
     this.refreshLabels();
   }
 
@@ -115,6 +126,7 @@ export class MenuSystem extends createSystem({}) {
     if (!session) return;
     cycleSetting(session.settings, key);
     session.applySettings();
+    if (import.meta.env.DEV) console.info(`[ShadowZoo] setting ${key} -> ${settingLabel(session.settings, key)}`);
     if (key === 'view') {
       store.narrow = session.settings.narrow;
       store.relightRequested = true;
@@ -138,7 +150,11 @@ export class MenuSystem extends createSystem({}) {
     for (const key of KEYS) this.label(`${key}-label`, settingLabel(session.settings, key));
   }
 
+  /** Sets a button label. Horizon kit ButtonLabel wraps a Text child, which is what holds the string. */
   private label(id: string, text: string): void {
-    this.menu?.requireElementById(id).setProperties({ text });
+    const element = this.menu?.requireElementById(id) as unknown as TextHolder | undefined;
+    if (!element) return;
+    const inner = element.children?.find((child): child is TextHolder => typeof (child as TextHolder).setProperties === 'function');
+    (inner ?? element).setProperties({ text });
   }
 }
