@@ -149,4 +149,20 @@ describe('Zoo', () => {
     zoo.update(1 / 60, pool, [pinchAt(0.1, 0.2)], wornAs('crocodile'), events);
     expect(zoo.fireflies.list).toHaveLength(1);
   });
+
+  it('a big visitor needs a bigger shadow, and timing is reported', () => {
+    const visitors = new Visitors(shapes, sil, [], 0);
+    const size = shapes.get('rabbit')!.target.frame.size;
+    visitors.enqueue('rabbit', { minSize: size * 1.4 });
+    expect(visitors.busy).toBe(true);
+    const small = [shaped('rabbit')];
+    for (let t = 0; t < 3; t += 1 / 60) expect(visitors.update(1 / 60, small)).toBeNull();
+    const big = shaped('rabbit');
+    for (let i = 0; i < big.caps.length; i++) big.caps[i] *= 1.6;
+    let revealed = null;
+    for (let t = 0; t < 3 && !revealed; t += 1 / 60) revealed = visitors.update(1 / 60, [big]);
+    expect(revealed?.species).toBe('rabbit');
+    expect(visitors.lastElapsed).toBeGreaterThan(3);
+    expect(visitors.busy).toBe(false);
+  });
 });
