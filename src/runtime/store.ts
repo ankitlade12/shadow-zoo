@@ -1,6 +1,7 @@
 import { createJointSet, type Handedness, type JointSet } from '../core/poses.js';
 import type { Stage } from '../core/stage.js';
 import type { GameEvent } from '../game/events.js';
+import type { Session } from '../game/Session.js';
 import type { ShadowCanvas } from '../render/ShadowCanvas.js';
 
 export interface HandSample {
@@ -17,6 +18,8 @@ export const store = {
   narrow: false,
   relightRequested: false,
   canvas: null as ShadowCanvas | null,
+  /** The running game session (menu and audio read settings from it). */
+  session: null as Session | null,
   /** Game events this frame; AudioSystem plays and clears them. */
   events: [] as GameEvent[],
   hands: {

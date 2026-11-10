@@ -191,6 +191,11 @@ export class ShadowCanvas {
     this.compositeMaterial.uniforms.uFade.value = value;
   }
 
+  /** Lantern brightness (0.24 by default; a longer streak glows warmer). */
+  setLight(value: number): void {
+    this.compositeMaterial.uniforms.uLight.value = value;
+  }
+
   begin(): void {
     this.count = 0;
   }
