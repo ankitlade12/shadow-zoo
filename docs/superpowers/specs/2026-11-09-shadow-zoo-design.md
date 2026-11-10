@@ -35,9 +35,11 @@ There are six creatures in the core game. All are one-handed and either hand wor
 | Rabbit | Sideways V: index and middle up as ears, thumb on the ring and pinky fingers | Hops, twitches its ears, nibbles | Ear wiggle makes a squeak |
 | Dog | Flat hand sideways, thumb up as the ear, pinky dropped as the jaw | Trots, chases the hand shadow, wags | Pinky jaw makes a bark |
 | Crocodile | Fingers together as the upper jaw, thumb below as the lower jaw | Slithers along the bottom of the light pool, chomps | Thumb jaw makes a chomp |
-| Swan | Fingertips pinched to the thumb as the beak, wrist bent | Glides, preens, bobs its neck | Beak open makes a honk |
+| Peacock | Open hand: fingers fanned up as the tail, thumb out front as the head | Struts, fans its tail, pecks | Tail fan (finger spread) makes a call |
 | Spider | Palm down, fingers curled downward as legs | Drops on a thread from the top, scuttles | Finger wiggle makes a skitter |
 | Turtle | Fist as the shell, thumb poking out as the head | Slow walk, hides in its shell when touched | Thumb in and out makes a peep |
+
+**Change, 2026-11-10:** the swan became a **peacock**. A one-handed swan has no neck without the untracked forearm, so its silhouette was too close to the spider's.
 
 **Stretch:** two two-handed creatures (bird and deer). They are only included if they score well under hand-overlap tests, because tracking struggles when two hands overlap.
 
@@ -51,8 +53,8 @@ There are six creatures in the core game. All are one-handed and either hand wor
    - **Feed:** pinch to release a firefly at your index fingertip's shadow; the nearest hungry creature chases and eats it.
    - **Wear:** make a known creature's shape. Your shadow gains eyes and a voice. Zoo creatures react: rabbits scatter when your dog barks, and your crocodile can eat fireflies.
 5. **Progress.**
-   - **Bonds:** each creature has 0–5 hearts, earned by petting, feeding and playing together. At 3 hearts it learns a trick (rabbit flip, dog roll, crocodile tail wag, swan dance, spider weaves a web in the corner of the pool, turtle spin).
-   - **Session 1:** guided rabbit, then dog, then crocodile. After that, swan, spider and turtle arrive as visitors after short play goals (about 45–60 s, or 3 fireflies eaten). A judge can meet all six in about 8–10 minutes.
+   - **Bonds:** each creature has 0–5 hearts, earned by petting, feeding and playing together. At 3 hearts it learns a trick (rabbit flip, dog roll, crocodile tail wag, peacock tail fan, spider weaves a web in the corner of the pool, turtle spin).
+   - **Session 1:** guided rabbit, then dog, then crocodile. After that, peacock, spider and turtle arrive as visitors after short play goals (about 45–60 s, or 3 fireflies eaten). A judge can meet all six in about 8–10 minutes.
    - **Stars:** each match earns 1–3 stars for speed. Personal bests are kept.
 
 ### 2.4 Reason to come back
@@ -114,8 +116,9 @@ src/core/            pure logic, unit-tested
                      pose -> 25 joint positions/radii; mirroring; animation channels
   projector.ts       3D joints -> 2D stage capsules (point-light projection, §3.2)
   silhouette.ts      capsules -> 48x48 coverage mask (signed-distance rasterizer);
-                     normalization by centroid and sqrt(area); IoU with a rotation search
-                     (-24, -12, 0, 12, 24 deg); mirroring
+                     normalization by centroid and sqrt(area); a 64-bin radial signature
+                     picks the rotation (within 28 deg) and penalizes misplaced protrusions;
+                     IoU at that rotation; either facing
   matcher.ts         per-target state machine: score smoothing (EMA), threshold,
                      0.6 s hold, assist relaxation, tracking-loss reset, events
   stage.ts           wall choice from plane descriptors; stage basis; light-pool

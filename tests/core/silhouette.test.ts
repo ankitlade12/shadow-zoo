@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createFrame, iou, matchScore, Silhouettes, TargetShape } from '../../src/core/silhouette.js';
+import { bestShift, createFrame, iou, matchScore, SIG_BINS, Silhouettes, TargetShape } from '../../src/core/silhouette.js';
 
 const caps = (list: number[][]) => Float32Array.from(list.flat());
 const transform = (src: Float32Array, k: number, dx: number, dy: number, deg: number) => {
@@ -50,9 +50,22 @@ describe('silhouettes', () => {
     expect(matchScore(sil, transform(ell, 1.7, 0.3, -0.2, 0), 0, 2, target, createFrame())).toBeGreaterThan(0.9);
   });
 
-  it('tolerates small rotations through the search', () => {
+  it('tolerates rotations up to about 24 degrees at any angle in between', () => {
     const target = new TargetShape(ell, 2, sil);
-    expect(matchScore(sil, transform(ell, 1, 0, 0, 10), 0, 2, target, createFrame())).toBeGreaterThan(0.8);
+    for (const deg of [-20, -9, -3, 3, 6, 10, 15, 20, 24]) {
+      expect(matchScore(sil, transform(ell, 1, 0, 0, deg), 0, 2, target, createFrame())).toBeGreaterThan(0.8);
+    }
+  });
+
+  it('bestShift recovers a circular rotation of a signature', () => {
+    const sig = new Float32Array(SIG_BINS);
+    sig[10] = 1;
+    sig[11] = 0.5;
+    const rotated = new Float32Array(SIG_BINS);
+    for (let b = 0; b < SIG_BINS; b++) rotated[(b + 3) % SIG_BINS] = sig[b];
+    const out = bestShift(sig, rotated, { k: 0, d: 0 });
+    expect(out.k).toBe(3);
+    expect(out.d).toBe(0);
   });
 
   it('accepts the mirrored silhouette', () => {
