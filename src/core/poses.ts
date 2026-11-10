@@ -101,3 +101,9 @@ export function orientJointSet(
   }
   return out;
 }
+
+/** Distance in meters between two joints of a set. */
+export function jointDistance(js: JointSet, a: number, b: number): number {
+  const p = js.pos;
+  return Math.hypot(p[a * 3] - p[b * 3], p[a * 3 + 1] - p[b * 3 + 1], p[a * 3 + 2] - p[b * 3 + 2]);
+}

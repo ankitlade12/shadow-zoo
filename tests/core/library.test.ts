@@ -73,6 +73,13 @@ describe('creature library', () => {
     }
   });
 
+  it.each(ids)('%s has an action pose and an actuator that closes', (id) => {
+    const s = shapes.get(id)!;
+    expect(s.actCaps.length).toBe(s.caps.length);
+    expect(s.actuator.open - s.actuator.closed).toBeGreaterThan(0.01);
+    expect(['hop', 'trot', 'slither', 'strut', 'dangle', 'creep']).toContain(s.def.motion);
+  });
+
   it('different creatures do not match each other', () => {
     const report: string[] = [];
     for (const a of ids) {

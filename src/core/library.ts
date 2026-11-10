@@ -1,79 +1,133 @@
 import { BONES, J } from './joints.js';
-import { buildJointSet, builtinAngles, orientJointSet, type HandPoseAngles, type JointSet } from './poses.js';
+import {
+  buildJointSet,
+  builtinAngles,
+  jointDistance,
+  orientJointSet,
+  type HandPoseAngles,
+  type JointSet,
+} from './poses.js';
 import { CAPSULE_STRIDE, ShadowProjector, type StagePlane } from './projector.js';
 import { Silhouettes, TargetShape } from './silhouette.js';
 import type { Vec3 } from './vec.js';
 
 export type CreatureId = 'rabbit' | 'dog' | 'crocodile' | 'peacock' | 'spider' | 'turtle';
+/** How a living creature moves around the light pool. */
+export type Motion = 'hop' | 'trot' | 'slither' | 'strut' | 'dangle' | 'creep';
 
 export interface CreatureDef {
   readonly id: CreatureId;
   readonly name: string;
-  /** IWER joint angles, left-hand convention. */
+  /** Base hand pose (IWER joint angles, left-hand convention): the shape players match. */
   readonly angles: HandPoseAngles;
+  /** Signature action pose: ears fold, jaw snaps shut, tail folds, legs curl, head tucks. */
+  readonly act: HandPoseAngles;
+  readonly motion: Motion;
   /** Canonical hand orientation in stage axes: x = right (u), y = up (v), z = toward the player (n). */
   readonly facing: { readonly fingers: Vec3; readonly palm: Vec3 };
   /** Eye glint: a joint plus an offset in silhouette-size units (x right, y up). */
   readonly eye: { readonly joint: number; readonly dx: number; readonly dy: number };
+  /** Joints whose distance is "open" in the base pose and "closed" in the act pose. */
+  readonly actuator: { readonly a: number; readonly b: number };
 }
 
 const B = builtinAngles;
 
+// Sideways V: two tall ears leaning back; folded fingers and thumb form the head.
+const RABBIT: HandPoseAngles = {
+  ...B.peace,
+  index: { mcp: 0, pip: 6, dip: 4, yaw: -12 },
+  middle: { mcp: 0, pip: 6, dip: 4, yaw: 12 },
+};
+// Flat snout forward, thumb up as the ear, pinky spread down as the open jaw.
+const DOG: HandPoseAngles = { ...B.flat, thumb: B['thumbs-up'].thumb, pinky: { mcp: 15, pip: 8, dip: 4, yaw: 32 } };
+// Fingers together as the upper jaw, straight thumb swung down as the wide-open lower jaw.
+const CROCODILE: HandPoseAngles = { ...B.flat, thumb: { ...B.flat.thumb, cmc: [-58, -4.8, -67.7], mcp: 0, ip: 0 } };
+// Back of the hand to the light, fingers spread and curled down as legs.
+const SPIDER: HandPoseAngles = {
+  ...B.claw,
+  thumb: B.open.thumb,
+  index: { mcp: 12, pip: 30, dip: 20, yaw: -32 },
+  middle: { mcp: 12, pip: 30, dip: 20, yaw: -10 },
+  ring: { mcp: 14, pip: 30, dip: 20, yaw: 12 },
+  pinky: { mcp: 18, pip: 32, dip: 20, yaw: 34 },
+};
+// Fist as the shell seen end-on, short bent thumb as the head.
+const TURTLE: HandPoseAngles = { ...B['thumbs-up'], thumb: { ...B['thumbs-up'].thumb, mcp: 25, ip: 20 } };
+
 export const CREATURES: readonly CreatureDef[] = [
   {
-    // Sideways V: two tall ears leaning back; folded fingers and thumb form the head.
     id: 'rabbit',
     name: 'Rabbit',
-    angles: { ...B.peace, index: { mcp: 0, pip: 6, dip: 4, yaw: -12 }, middle: { mcp: 0, pip: 6, dip: 4, yaw: 12 } },
+    angles: RABBIT,
+    act: { ...RABBIT, index: { mcp: 24, pip: 40, dip: 20, yaw: -14 }, middle: { mcp: 24, pip: 40, dip: 20, yaw: 14 } },
+    motion: 'hop',
     facing: { fingers: [-0.45, 1, 0], palm: [0, 0, -1] },
     eye: { joint: J.thumbTip, dx: 0.1, dy: 0.12 },
+    actuator: { a: J.indexTip, b: J.thumbTip },
   },
   {
-    // Flat snout forward, thumb up as the ear, pinky spread down as the open jaw.
     id: 'dog',
     name: 'Dog',
-    angles: { ...B.flat, thumb: B['thumbs-up'].thumb, pinky: { mcp: 15, pip: 8, dip: 4, yaw: 32 } },
+    angles: DOG,
+    act: { ...DOG, pinky: { mcp: 6, pip: 4, dip: 2, yaw: -4 } },
+    motion: 'trot',
     facing: { fingers: [1, 0.1, 0], palm: [0, 0, 1] },
     eye: { joint: J.indexProx, dx: 0.05, dy: 0.1 },
+    actuator: { a: J.pinkyTip, b: J.ringTip },
   },
   {
-    // Fingers together as the upper jaw, straight thumb swung down as the wide-open lower jaw.
     id: 'crocodile',
     name: 'Crocodile',
-    angles: { ...B.flat, thumb: { ...B.flat.thumb, cmc: [-58, -4.8, -67.7], mcp: 0, ip: 0 } },
+    angles: CROCODILE,
+    act: { ...CROCODILE, thumb: { ...B.flat.thumb, cmc: [-20, -4.8, -67.7], mcp: 0, ip: 0 } },
+    motion: 'slither',
     facing: { fingers: [1, 0.05, 0], palm: [0, 0, -1] },
     eye: { joint: J.indexProx, dx: 0, dy: 0.12 },
+    actuator: { a: J.thumbTip, b: J.indexTip },
   },
   {
     // Open hand: fingers fanned up as the tail, thumb out front as the head and beak.
     id: 'peacock',
     name: 'Peacock',
     angles: B.open,
+    act: {
+      ...B.open,
+      index: { ...B.open.index, yaw: -4 },
+      middle: { ...B.open.middle, yaw: 0 },
+      ring: { ...B.open.ring, yaw: 6 },
+      pinky: { ...B.open.pinky, yaw: 8 },
+    },
+    motion: 'strut',
     facing: { fingers: [-0.2, 1, 0], palm: [0, 0, -1] },
     eye: { joint: J.thumbProx, dx: 0.02, dy: 0.06 },
+    actuator: { a: J.indexTip, b: J.pinkyTip },
   },
   {
-    // Back of the hand to the light, fingers spread and curled down as legs.
     id: 'spider',
     name: 'Spider',
-    angles: {
-      ...B.claw,
-      thumb: B.open.thumb,
-      index: { mcp: 12, pip: 30, dip: 20, yaw: -32 },
-      middle: { mcp: 12, pip: 30, dip: 20, yaw: -10 },
-      ring: { mcp: 14, pip: 30, dip: 20, yaw: 12 },
-      pinky: { mcp: 18, pip: 32, dip: 20, yaw: 34 },
+    angles: SPIDER,
+    act: {
+      ...SPIDER,
+      index: { mcp: 35, pip: 70, dip: 40, yaw: -28 },
+      middle: { mcp: 35, pip: 70, dip: 40, yaw: -8 },
+      ring: { mcp: 35, pip: 70, dip: 40, yaw: 10 },
+      pinky: { mcp: 38, pip: 70, dip: 40, yaw: 30 },
     },
+    motion: 'dangle',
     facing: { fingers: [0, -1, 0], palm: [0, 0, -1] },
     eye: { joint: J.middleMeta, dx: 0, dy: 0.05 },
+    actuator: { a: J.middleTip, b: J.wrist },
   },
   {
-    // Fist as the shell seen end-on, short bent thumb as the head.
     id: 'turtle',
     name: 'Turtle',
-    angles: { ...B['thumbs-up'], thumb: { ...B['thumbs-up'].thumb, mcp: 25, ip: 20 } },
+    angles: TURTLE,
+    act: { ...TURTLE, thumb: B.fist.thumb },
+    motion: 'creep',
     facing: { fingers: [0, -0.3, -1], palm: [0, -1, 0] },
     eye: { joint: J.thumbTip, dx: -0.03, dy: 0.06 },
+    actuator: { a: J.thumbTip, b: J.indexProx },
   },
 ];
 
@@ -88,8 +142,8 @@ const CANON_LIGHT: Vec3 = [0, 0, 40];
 const CANON_WRIST: Vec3 = [0, 0, 0.45];
 
 /** The creature's left hand in canonical stage space (a distant light makes the view almost orthographic). */
-export function canonicalJoints(def: CreatureDef): JointSet {
-  return orientJointSet(buildJointSet(def.angles), 'left', def.facing, CANON_WRIST);
+export function canonicalJoints(def: CreatureDef, angles: HandPoseAngles = def.angles): JointSet {
+  return orientJointSet(buildJointSet(angles), 'left', def.facing, CANON_WRIST);
 }
 
 export function canonicalCapsules(joints: JointSet, out = new Float32Array(BONES.length * CAPSULE_STRIDE)): { caps: Float32Array; count: number } {
@@ -101,11 +155,16 @@ export function canonicalCapsules(joints: JointSet, out = new Float32Array(BONES
 export interface CreatureShape {
   readonly def: CreatureDef;
   readonly joints: JointSet;
+  readonly actJoints: JointSet;
   readonly caps: Float32Array;
+  /** Capsules of the act pose, same layout as `caps`. */
+  readonly actCaps: Float32Array;
   readonly count: number;
   readonly target: TargetShape;
   /** Eye position in canonical stage space. */
   readonly eye: readonly [number, number];
+  /** Actuator joints and their distances (meters) in the base (open) and act (closed) poses. */
+  readonly actuator: { readonly a: number; readonly b: number; readonly open: number; readonly closed: number };
 }
 
 export function buildCreatureShapes(sil = new Silhouettes()): Map<CreatureId, CreatureShape> {
@@ -114,12 +173,17 @@ export function buildCreatureShapes(sil = new Silhouettes()): Map<CreatureId, Cr
   projector.setup(CANON_LIGHT, CANON_STAGE);
   for (const def of CREATURES) {
     const joints = canonicalJoints(def);
+    const actJoints = canonicalJoints(def, def.act);
     const { caps, count } = canonicalCapsules(joints);
+    const act = canonicalCapsules(actJoints);
+    if (act.count !== count) throw new Error(`${def.id}: the action pose lost bones`);
     const target = new TargetShape(caps, count, sil);
     const e = def.eye.joint * 3;
     projector.project(joints.pos[e], joints.pos[e + 1], joints.pos[e + 2]);
     const eye: [number, number] = [projector.x + def.eye.dx * target.frame.size, projector.y + def.eye.dy * target.frame.size];
-    shapes.set(def.id, { def, joints, caps, count, target, eye });
+    const { a, b } = def.actuator;
+    const actuator = { a, b, open: jointDistance(joints, a, b), closed: jointDistance(actJoints, a, b) };
+    shapes.set(def.id, { def, joints, actJoints, caps, actCaps: act.caps, count, target, eye, actuator });
   }
   return shapes;
 }
