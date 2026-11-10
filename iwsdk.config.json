@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/@iwsdk/core/dist/schemas/iwsdk-project.v1.schema.json",
+  "version": "iwsdk.project.v1",
+  "scene": "./public/scenes/main.iwsdk.scene.json",
+  "assets": { "module": "./src/assets" },
+  "components": { "module": "./src/components" },
+  "world": {
+    "xr": {
+      "mode": "ar",
+      "offer": "always",
+      "features": {
+        "handTracking": { "required": true },
+        "planeDetection": true
+      }
+    },
+    "input": { "canvasPointerEvents": true },
+    "render": {
+      "fov": 70,
+      "near": 0.01,
+      "far": 50,
+      "camera": { "position": [0, 1.6, 0], "lookAt": [0, 1.5, -2] }
+    },
+    "features": {
+      "locomotion": false,
+      "grabbing": false,
+      "physics": false,
+      "sceneUnderstanding": true,
+      "environmentRaycast": false,
+      "spatialUI": { "kit": "horizon", "preferredColorScheme": "dark" }
+    }
+  },
+  "dev": {
+    "emulator": { "device": "metaQuest3", "environment": "sunlit_living_room" }
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+coverage/
+.tmp/
+.iwsdk/
+.mcp.json
+.cursor/mcp.json
+.vscode/mcp.json
+.codex/config.toml
