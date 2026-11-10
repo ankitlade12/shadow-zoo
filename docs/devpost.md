@@ -1,13 +1,14 @@
 # Devpost submission draft: Shadow Zoo
 
-**Status:** a draft for the representative to review. Nothing has been submitted or published.
+**Status:** a draft for the representative to review. The game and code are published; the Devpost entry has not been submitted.
 
 - **Name:** Shadow Zoo
 - **Tagline (140 characters max):** Make shadow puppets with your hands on your real wall, and watch them come alive.
 - **Track:** Gaming
 - **Division:** New Experience. The project was conceived and built after September 24, 2026.
 - **Platform:** Meta Quest 3 and 3S (WebXR, built with the Immersive Web SDK). It's fully usable with hands, controllers aren't needed, and it's designed for seated play.
-- **Build link:** PENDING. The GitHub Pages URL comes after the representative approves publishing.
+- **Build link:** https://ankitlade12.github.io/shadow-zoo/ (open it in Meta Quest Browser)
+- **Code:** https://github.com/ankitlade12/shadow-zoo (MIT)
 - **Video:** recorded, `docs/video/shadow-zoo-demo.mp4` (1:36, IWSDK emulator footage, labeled on screen). It still needs uploading to YouTube or Vimeo for the submission link.
 
 ## Description
