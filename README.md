@@ -2,6 +2,9 @@
 
 Make shadow puppets with your hands on your real wall, and watch them come alive.
 
+**Play it:** open **https://ankitlade12.github.io/shadow-zoo/** in Meta Quest Browser on a Quest 3 or 3S.
+**Watch it:** [`docs/video/shadow-zoo-demo.mp4`](docs/video/shadow-zoo-demo.mp4) (1:36, IWSDK emulator footage).
+
 Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's Immersive Web SDK (WebXR). A warm virtual lantern shines from behind you, and your tracked hands cast soft shadows onto the wall you are facing. When your hand's shadow matches a creature's glowing outline, it wriggles free and joins a living zoo on your wall. You can feed it fireflies, pet it with your shadow, or "wear" it and puppeteer its voice. The zoo is still there the next time you come back.
 
 ## How to play
@@ -104,3 +107,7 @@ src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound
 - Built and tested in the IWSDK WebXR emulator: synthetic room, emulated hand tracking, scripted hand poses. No physical Quest headset was available during development.
 - Real hand-tracking noise, passthrough contrast in real rooms, and on-device frame rate still need confirming on hardware.
 - Evidence screenshots and checkpoint reports are in `docs/`.
+
+## License
+
+[MIT](LICENSE)

@@ -2,6 +2,7 @@
   "name": "shadow-zoo",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "iwsdk dev restart --open --foreground",
