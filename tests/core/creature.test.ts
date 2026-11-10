@@ -1,29 +1,83 @@
 import { describe, expect, it } from 'vitest';
-import { HopperCreature } from '../../src/core/creature.js';
+import { Creature, groundY, type CreatureEvent } from '../../src/core/creature.js';
+import type { Motion } from '../../src/core/library.js';
 import { mulberry32 } from '../../src/core/rng.js';
 
-const pool = { u: 0.6, v: 0.4 };
+const pool = { u: 0.7, v: 0.5 };
+const make = (motion: Motion = 'hop', x = 0, y = 0.2, seed = 1) => new Creature(1, 'rabbit', motion, x, y, 1, 0.3, mulberry32(seed));
+const run = (c: Creature, seconds: number, events: CreatureEvent[] = []) => {
+  for (let t = 0; t < seconds; t += 1 / 60) c.update(1 / 60, pool, events);
+  return events;
+};
 
-describe('HopperCreature', () => {
-  it('stays inside the light pool while wandering', () => {
-    const c = new HopperCreature('rabbit', 0, 0, 1, 0.25, mulberry32(1));
-    for (let i = 0; i < 6000; i++) {
-      c.update(1 / 60, pool);
-      expect((c.x / pool.u) ** 2 + (c.y / pool.v) ** 2).toBeLessThanOrEqual(1.0001);
+describe('Creature', () => {
+  it('appears with a bounce and settles onto the ground line', () => {
+    const c = make();
+    run(c, 1);
+    expect(c.mode).not.toBe('appear');
+    expect(Math.abs(c.y - groundY(pool))).toBeLessThan(0.01);
+  });
+
+  it.each<Motion>(['hop', 'trot', 'slither', 'strut', 'dangle', 'creep'])('%s wanders without leaving the pool', (motion) => {
+    const c = make(motion, 0, 0, 7);
+    for (let i = 0; i < 60 * 60; i++) {
+      c.update(1 / 60, pool, []);
+      expect((c.x / pool.u) ** 2 + (c.y / pool.v) ** 2).toBeLessThanOrEqual(1);
     }
   });
 
-  it('hops while moving, faces its direction and sometimes rests', () => {
-    const c = new HopperCreature('rabbit', 0, 0, 1, 0.25, mulberry32(3));
-    let hopped = false;
-    let rested = false;
-    for (let i = 0; i < 1200; i++) {
-      c.update(1 / 60, pool);
-      if (c.hop > 0.01) hopped = true;
-      if (c.resting) rested = true;
+  it('chases a target until it is reached', () => {
+    const c = make('trot');
+    run(c, 1);
+    c.chase(9, 0.4, groundY(pool) + 0.1);
+    let reached = false;
+    for (let i = 0; i < 600 && !reached; i++) {
+      c.update(1 / 60, pool, []);
+      reached = c.reached();
     }
-    expect(hopped).toBe(true);
-    expect(rested).toBe(true);
-    expect([1, -1]).toContain(c.facing);
+    expect(reached).toBe(true);
+  });
+
+  it('the spider reaches targets above the ground', () => {
+    const c = make('dangle', 0, 0.3);
+    run(c, 1);
+    c.chase(9, 0.2, 0.1);
+    let reached = false;
+    for (let i = 0; i < 900 && !reached; i++) {
+      c.update(1 / 60, pool, []);
+      reached = c.reached();
+    }
+    expect(reached).toBe(true);
+  });
+
+  it('eating emits one ate event and then cheers', () => {
+    const c = make();
+    run(c, 1);
+    c.startEat();
+    const events = run(c, 1);
+    expect(events).toHaveLength(1);
+    expect(events[0].creature).toBe(c);
+    expect(c.mode).toBe('happy');
+  });
+
+  it('flees away from a threat and can be calmed', () => {
+    const c = make('trot');
+    run(c, 1);
+    c.x = 0;
+    c.flee(-0.1);
+    run(c, 0.3);
+    expect(c.x).toBeGreaterThan(0.1);
+    c.calm();
+    expect(c.mode).toBe('rest');
+  });
+
+  it('blinks now and then', () => {
+    const c = make();
+    let blinked = false;
+    for (let i = 0; i < 60 * 10; i++) {
+      c.update(1 / 60, pool, []);
+      if (c.eyeOpen === 0) blinked = true;
+    }
+    expect(blinked).toBe(true);
   });
 });
