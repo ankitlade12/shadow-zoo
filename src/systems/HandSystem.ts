@@ -16,6 +16,12 @@ export class HandSystem extends createSystem({}) {
   private readonly test = readTestPose(globalThis.location?.search ?? '', import.meta.env.VITE_TESTPOSE as string | undefined);
 
   update(): void {
+    // Hands-first: the player's real hands are visible in passthrough, so never draw virtual hands or controllers.
+    const visuals = this.input.xr.visualAdapters;
+    for (const side of SIDES) {
+      visuals.hand[side]?.toggleVisual(false);
+      visuals.controller[side]?.toggleVisual(false);
+    }
     if (this.test) {
       for (const side of SIDES) store.hands[side].tracked = false;
       if (store.stage) placeTestPose(this.test, store.stage, store.hands[this.test.side]);
