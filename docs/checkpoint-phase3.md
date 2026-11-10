@@ -29,7 +29,17 @@ All six creatures matched on the first try at Normal assist. `evidence/drill/zoo
    - In the first run, Reset reloads the page, and the drill carried on posing hands on the landing page. The drill now waits for the old XR session to end, re-enters and checks `sessionActive`.
    - In the second run, posing before the visitor arrived counted gate waiting time as matching time. The drill now waits for the visitor log first.
    - Neither was a game bug.
-2. **A full zoo bunches up.** With all six creatures, the silhouettes overlap into one dark mass in the middle of the pool (`evidence/drill/zoo.png`). They keep their hand-cast size, and all walkers share one ground line. This is addressed next, in the zoo-spacing change.
+2. **A full zoo bunched up.** With all six creatures, the silhouettes overlapped into one dark mass in the middle of the pool (`evidence/drill/zoo.png`).
+   - **Cause.** On the emulator's wall (3.4 m away, magnification 5) a cast creature is 0.47–0.63 m in size and up to 1.1 m wide. The pool's ground line is only about 1.7 m long.
+   - **Fixed: the zoo makes room.**
+     - A creature appears at its hand-cast size, then eases to a shared zoo size. The zoo size shrinks as more creatures arrive: no shrink for one, about 0.2 m for six.
+     - Walkers wander toward the middle of their own gap between neighbors, so they spread evenly and don't walk through each other.
+     - The ground line moved up into brighter light (-0.42 of the pool's half-height).
+   - **Measured in simulation (60 s, three seeds).**
+     - The mean gap to the nearest walker rose from 0.16–0.19 m to about 0.34 m.
+     - Overlapping pairs fell from 28–37% to 7–10%.
+   - **Evidence:** `evidence/p3-zoo-spread.png` and `evidence/p3-zoo-spread-detail.png`.
+3. **Feeding a full zoo would have stalled.** Fireflies settled 0.16 m above the ground line, which is the full vertical reach of a 0.18 m creature. They now settle at 0.1 of the pool's half-height. A regression test feeds a full zoo three fireflies and expects three meals.
 
 ## Limits
 

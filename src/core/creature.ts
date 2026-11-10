@@ -17,9 +17,11 @@ export interface CreatureEvent {
 const SPEED: Readonly<Record<Motion, number>> = { hop: 1.2, trot: 1.5, slither: 0.8, strut: 0.7, dangle: 0.9, creep: 0.3 };
 const APPEAR_TIME = 0.8;
 const TRICK_TIME = 0.9;
+/** How quickly a creature eases toward its zoo fit (per second). */
+const FIT_RATE = 2.5;
 
 /** The line that walking creatures' silhouette centers follow, below the middle of the pool. */
-export const groundY = (pool: Pool): number => -0.5 * pool.v;
+export const groundY = (pool: Pool): number => -0.42 * pool.v;
 
 /** Usable half-width of the pool at height y, kept clear of the soft edge. */
 export function halfWidthAt(pool: Pool, y: number): number {
@@ -86,6 +88,12 @@ export class Creature {
   spin = 0;
   /** 1 = full motion; lower values calm hops and bounces (reduced motion). */
   motionScale = 1;
+  /** Share of its cast size the creature shows now; eases toward fitTarget once it has appeared. */
+  fit = 1;
+  /** The share of its cast size the zoo has room for. */
+  fitTarget = 1;
+  /** Chooses where a walker wanders to on the ground line (the zoo spreads them out); jitter is -1..1. */
+  pickSpot: ((self: Creature, halfWidth: number, jitter: number) => number) | null = null;
   private trickTime = 0;
   private timer = APPEAR_TIME;
   private phase = 0;
@@ -102,16 +110,31 @@ export class Creature {
     readonly motion: Motion,
     public x: number,
     public y: number,
-    /** Canonical silhouette meters to stage meters. */
-    public scale: number,
-    /** Silhouette size on the wall (sqrt of area, meters). */
-    readonly size: number,
+    /** Canonical silhouette meters to stage meters, as cast. */
+    readonly baseScale: number,
+    /** Silhouette size on the wall as cast (sqrt of area, meters). */
+    readonly baseSize: number,
     private readonly rng: () => number,
   ) {
     this.targetX = x;
     this.targetY = y;
     this.startY = y;
     this.blinkIn = 2 + rng() * 3;
+  }
+
+  /** Canonical silhouette meters to stage meters, now. */
+  get scale(): number {
+    return this.baseScale * this.fit;
+  }
+
+  /** Silhouette size on the wall now (sqrt of area, meters). */
+  get size(): number {
+    return this.baseSize * this.fit;
+  }
+
+  /** Where the creature stands, or where it is walking to. */
+  get spotX(): number {
+    return this.mode === 'wander' ? this.targetX : this.x;
   }
 
   /** Busy creatures ignore new fireflies and petting. */
@@ -202,6 +225,7 @@ export class Creature {
       default:
         this.move(dt, pool);
     }
+    if (this.mode !== 'appear') this.fit += (this.fitTarget - this.fit) * Math.min(1, dt * FIT_RATE);
     this.lift *= this.motionScale;
     this.bounce = 1 + (this.bounce - 1) * this.motionScale;
     this.keepInside(pool);
@@ -235,7 +259,9 @@ export class Creature {
       this.targetX = (this.rng() * 2 - 1) * halfWidthAt(pool, 0.3 * pool.v);
       this.targetY = -0.4 * pool.v + this.rng() * 0.9 * pool.v;
     } else {
-      this.targetX = (this.rng() * 2 - 1) * halfWidthAt(pool, groundY(pool));
+      const hw = halfWidthAt(pool, groundY(pool));
+      const jitter = this.rng() * 2 - 1;
+      this.targetX = this.pickSpot ? this.pickSpot(this, hw, jitter) : jitter * hw;
       this.targetY = groundY(pool);
     }
   }

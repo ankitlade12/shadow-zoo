@@ -56,7 +56,8 @@ export class Fireflies {
   }
 
   update(dt: number, pool: Pool): void {
-    const settle = groundY(pool) + 0.18 * pool.v;
+    // Settle at head height for the zoo's smallest creatures, so a full zoo can still reach them.
+    const settle = groundY(pool) + 0.1 * pool.v;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const f = this.list[i];
       f.age += dt;

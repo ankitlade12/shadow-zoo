@@ -150,6 +150,50 @@ describe('Zoo', () => {
     expect(zoo.fireflies.list).toHaveLength(1);
   });
 
+  it('a full zoo shrinks its creatures and spreads them along the ground line', () => {
+    const wide = { u: 1.2, v: 0.9 };
+    const zoo = new Zoo(shapes, mulberry32(5));
+    const all = ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'] as const;
+    for (const species of all) zoo.add({ species, x: 0, y: 0, size: shapes.get(species)!.target.frame.size * 5, scale: 5 }, []);
+    let room = 0;
+    let samples = 0;
+    for (let i = 0; i < 60 * 40; i++) {
+      zoo.update(1 / 60, wide, [], null, []);
+      if (i < 60 * 10 || i % 30 !== 0) continue;
+      const xs = zoo.creatures.filter((c) => c.motion !== 'dangle').map((c) => c.x);
+      for (const x of xs) room += Math.min(...xs.filter((o) => o !== x).map((o) => Math.abs(o - x)));
+      samples += xs.length;
+    }
+    const size = zoo.creatures[0].size;
+    for (const c of zoo.creatures) {
+      expect(c.size).toBeLessThan(0.21);
+      expect(c.size).toBeCloseTo(size, 3);
+    }
+    // Walkers keep about a body width of room to their nearest neighbor on average.
+    expect(room / samples).toBeGreaterThan(1.5 * size);
+  });
+
+  it('a full zoo of small creatures still catches the fireflies you release', () => {
+    const wide = { u: 1.2, v: 0.9 };
+    const zoo = new Zoo(shapes, mulberry32(8));
+    const all = ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'] as const;
+    for (const species of all) zoo.add({ species, x: 0, y: 0, size: shapes.get(species)!.target.frame.size * 5, scale: 5 }, []);
+    for (let i = 0; i < 60 * 5; i++) zoo.update(1 / 60, wide, [], null, []);
+    const events: GameEvent[] = [];
+    for (const x of [-0.5, 0, 0.5]) zoo.update(1 / 60, wide, [pinchAt(x, 0.4)], null, events);
+    for (let i = 0; i < 60 * 25; i++) zoo.update(1 / 60, wide, [], null, events);
+    expect(events.filter((e) => e.type === 'eat')).toHaveLength(3);
+  });
+
+  it('a zoo of one keeps its creature at the size it was cast', () => {
+    const wide = { u: 1.2, v: 0.9 };
+    const zoo = new Zoo(shapes, mulberry32(5));
+    const size = shapes.get('dog')!.target.frame.size * 5;
+    const dog = zoo.add({ species: 'dog', x: 0, y: 0, size, scale: 5 }, []);
+    for (let i = 0; i < 60 * 5; i++) zoo.update(1 / 60, wide, [], null, []);
+    expect(dog.size).toBeCloseTo(size, 5);
+  });
+
   it('a big visitor needs a bigger shadow, and timing is reported', () => {
     const visitors = new Visitors(shapes, sil, [], 0);
     const size = shapes.get('rabbit')!.target.frame.size;

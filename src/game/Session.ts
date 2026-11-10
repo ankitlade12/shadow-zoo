@@ -1,4 +1,4 @@
-import type { Pool } from '../core/creature.js';
+import { groundY, halfWidthAt, type Pool } from '../core/creature.js';
 import { localDay, visitToday, type Greeting } from '../core/daily.js';
 import type { CreatureId, CreatureShape } from '../core/library.js';
 import { TUNING } from '../core/matcher.js';
@@ -93,7 +93,7 @@ export class Session {
     data.unlocked.forEach((species, i) => {
       const shape = this.shapes.get(species);
       if (!shape) return;
-      const x = ((i + 0.5) / n - 0.5) * pool.u * 1.2;
+      const x = ((i + 0.5) / n - 0.5) * 2 * halfWidthAt(pool, groundY(pool));
       this.zoo.add({ species, x, y: 0, size: shape.target.frame.size * magnification, scale: magnification }, [], { silent: true, bond: data.bonds[species] ?? 0 });
     });
   }

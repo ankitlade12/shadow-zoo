@@ -82,6 +82,19 @@ describe('Session', () => {
     expect(session.visitors.current).not.toBeNull();
   });
 
+  it('restores a returning zoo already at its fitted size, spread across the ground', () => {
+    const save = freshSave();
+    save.unlocked = ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'];
+    save.lastDay = '2026-11-10';
+    const session = new Session(shapes, sil, withSave(save), at('2026-11-10'), mulberry32(4));
+    const wide = { u: 1.2, v: 0.9 };
+    session.onStage(wide, 5);
+    session.update(1 / 30, [hand(null)], projector, wide, []);
+    const xs = session.zoo.creatures.map((c) => c.x);
+    for (const c of session.zoo.creatures) expect(c.size).toBeLessThan(0.21);
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(1.2);
+  });
+
   it('asks for a little play before each visitor after the first three', () => {
     const save = freshSave();
     save.unlocked = ['rabbit', 'dog', 'crocodile'];

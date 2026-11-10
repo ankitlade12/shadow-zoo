@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Creature, groundY, type CreatureEvent } from '../../src/core/creature.js';
+import { Creature, groundY, halfWidthAt, type CreatureEvent } from '../../src/core/creature.js';
 import type { Motion } from '../../src/core/library.js';
 import { mulberry32 } from '../../src/core/rng.js';
 
@@ -92,6 +92,31 @@ describe('Creature', () => {
     expect(c.spin).toBeLessThan(Math.PI * 2);
     run(c, 0.6);
     expect(c.spin).toBe(0);
+  });
+
+  it('keeps its cast size while appearing, then eases to its zoo fit', () => {
+    const c = make();
+    c.fitTarget = 0.5;
+    run(c, 0.5);
+    expect(c.size).toBeCloseTo(0.3, 5);
+    run(c, 3);
+    expect(c.size).toBeCloseTo(0.15, 3);
+    expect(c.scale).toBeCloseTo(0.5, 3);
+  });
+
+  it('walks to the spot its picker chooses', () => {
+    const c = make('trot', 0, 0.2, 3);
+    const jitters: number[] = [];
+    c.pickSpot = (self, halfWidth, jitter) => {
+      expect(self).toBe(c);
+      expect(halfWidth).toBeCloseTo(halfWidthAt(pool, groundY(pool)), 6);
+      jitters.push(jitter);
+      return 0.3;
+    };
+    run(c, 12);
+    expect(jitters.length).toBeGreaterThan(0);
+    for (const j of jitters) expect(Math.abs(j)).toBeLessThanOrEqual(1);
+    expect(c.x).toBeCloseTo(0.3, 2);
   });
 
   it('hops lower with reduced motion', () => {

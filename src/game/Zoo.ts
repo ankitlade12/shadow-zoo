@@ -1,4 +1,5 @@
 import { Creature, type CreatureEvent, type Pool } from '../core/creature.js';
+import { spreadSpot, zooSize } from '../core/crowd.js';
 import { Fireflies } from '../core/fireflies.js';
 import { capsulesNear } from '../core/interact.js';
 import { J } from '../core/joints.js';
@@ -23,6 +24,8 @@ export class Zoo {
   private readonly unlockedSet = new Set<CreatureId>();
   private readonly petTimers = new Map<number, number>();
   private readonly creatureEvents: CreatureEvent[] = [];
+  /** Restored creatures take their zoo fit at once instead of shrinking into it. */
+  private readonly snapFit = new Set<Creature>();
   private nextId = 1;
   private motionScale = 1;
 
@@ -40,6 +43,8 @@ export class Zoo {
     const creature = new Creature(this.nextId++, revealed.species, def.motion, revealed.x, revealed.y, revealed.scale, revealed.size, this.rng);
     creature.bond = options.bond ?? 0;
     creature.motionScale = this.motionScale;
+    creature.pickSpot = (self, halfWidth, jitter) => spreadSpot(self, this.creatures, halfWidth, jitter);
+    if (options.silent) this.snapFit.add(creature);
     this.creatures.push(creature);
     this.unlockedSet.add(revealed.species);
     if (!options.silent) {
@@ -72,6 +77,7 @@ export class Zoo {
   }
 
   update(dt: number, pool: Pool, hands: readonly HandShadow[], worn: Worn | null, events: GameEvent[]): void {
+    this.fitToPool(pool);
     this.feed(hands, worn, pool, events);
     if (worn?.voice) this.onVoice(worn, pool, events);
     this.assignFireflies();
@@ -89,6 +95,14 @@ export class Zoo {
     }
     this.fireflies.update(dt, pool);
     this.particles.update(dt);
+  }
+
+  /** The more creatures, the smaller each one gets, so a full zoo still reads as six animals. */
+  private fitToPool(pool: Pool): void {
+    const size = zooSize(pool, this.creatures.length);
+    for (const c of this.creatures) c.fitTarget = Math.min(1, size / c.baseSize);
+    for (const c of this.snapFit) c.fit = c.fitTarget;
+    this.snapFit.clear();
   }
 
   /** True when the worn creature's action is itself a thumb–index pinch (its voice, not a feed). */
