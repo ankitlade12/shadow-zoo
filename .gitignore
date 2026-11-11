@@ -11,6 +11,8 @@ coverage/
 .vscode/mcp.json
 .codex/config.toml
 # Demo video scratch (frames, logs, soundtrack); only the final cut is kept.
-docs/video/*
-!docs/video/shadow-zoo-demo.mp4
+docs/video/
 __pycache__/
+# Kept locally, not published: the submission text and the files for YouTube and Devpost.
+docs/devpost.md
+docs/thumbnail-*.jpg

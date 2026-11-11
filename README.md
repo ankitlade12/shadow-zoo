@@ -6,12 +6,10 @@ Make shadow animals with your bare hands on your real wall, and watch them come 
 
 Entry for the Meta VR Start Developer Competition 2026: Gaming track, New Experience division.
 
-![Shadow Zoo](docs/thumbnail-youtube.jpg)
-
 | | |
 |---|---|
 | Play it | https://ankitlade12.github.io/shadow-zoo/ (Meta Quest Browser on Quest 3 or 3S) |
-| Demo video | [docs/video/shadow-zoo-demo.mp4](docs/video/shadow-zoo-demo.mp4) (2:08, narrated and captioned) |
+| Demo video | 2:08, narrated and captioned, on YouTube (link with the Devpost entry) |
 | No headset? | The same link opens a desktop preview: your real hands through a webcam, or the mouse |
 | Built with | Meta's Immersive Web SDK (WebXR), three.js, TypeScript, Web Audio |
 
@@ -112,7 +110,7 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 
 - One art direction throughout: warm candlelight, soft shadows, cream type, and the same lantern glow from the landing page to the finale.
 - Sound is synthesized and placed in space: crickets from the wall, a voice for each creature, chirps for fireflies.
-- The [demo video](docs/video/shadow-zoo-demo.mp4) is real gameplay with a narrated walkthrough and captions.
+- The demo video is real gameplay with a narrated walkthrough and captions.
 
 ## What's real and what's emulated
 
@@ -153,8 +151,8 @@ npm run build        # static site in dist/; GitHub Actions deploys main to GitH
 bash scripts/demo.sh                                                  # plays and records the scripted demo
 ./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
 python3 scripts/narrate.py                                           # the voiceover, from scripts/narration.json
-python3 scripts/encode.py                                            # docs/video/shadow-zoo-demo.mp4, with captions
-python3 scripts/gallery.py                                           # docs/gallery/ and the thumbnails
+python3 scripts/encode.py                                            # the captioned video, in docs/video/
+python3 scripts/gallery.py                                           # docs/gallery/, plus thumbnails in docs/
 ```
 
 ## Project structure
@@ -173,7 +171,7 @@ src/
 public/ui/     the menu (UIKitML)
 tests/         Vitest suite
 scripts/       emulator drill and the demo video pipeline
-docs/          demo video, screenshots, thumbnails and the Devpost submission text
+docs/gallery/  screenshots from the demo video
 ```
 
 ## License
