@@ -6,10 +6,13 @@ Inputs, from scripts/record.mjs, scripts/demo.sh and scripts/render-audio.mjs:
                                              (seconds since epoch); segments are joined end to end
   docs/video/chapters.txt                    one "<epoch seconds>\\t<title>" line per beat (optional)
   docs/video/audio.wav                       the rebuilt soundtrack (optional)
+  docs/video/voice.wav, narration.json       the voiceover and its lines' timing, from
+                                             scripts/narrate.py (optional)
 
 Keeps the real timing between frames and shows each beat's title for a few seconds. A title that
-starts with "=" is shown as a centered card, with "|" between lines. A permanent label says this
-is emulator footage. Needs ffmpeg and Pillow. Usage: python3 scripts/encode.py
+starts with "=" is shown as a centered card, with "|" between lines. Each voiceover line is
+captioned at the bottom while it plays, and the game's sound dips under the voice. A permanent
+label says this is emulator footage. Needs ffmpeg and Pillow. Usage: python3 scripts/encode.py
 """
 import json
 import os
@@ -61,6 +64,29 @@ def pill(lines, fonts, pad_x, pad_y, gap, fill, radius, align='left'):
     return img
 
 
+def wrap(text, fnt, width):
+    """Splits text into lines no wider than `width` pixels in `fnt`."""
+    probe = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
+    lines, line = [], ''
+    for word in text.split():
+        trial = f'{line} {word}'.strip()
+        if line and probe.textlength(trial, font=fnt) > width:
+            lines.append(line)
+            line = word
+        else:
+            line = trial
+    return lines + ([line] if line else [])
+
+
+def caption_image(text, i):
+    """A voiceover caption: centered lines on a dark rounded panel, for the bottom of the frame."""
+    fnt = font(SANS, 30)
+    img = pill(wrap(text, fnt, 1000), [fnt], 24, 12, 8, (10, 7, 5, 175), 14, align='center')
+    path = os.path.join(OVERLAYS, f'caption{i:02d}.png')
+    img.save(path)
+    return path, img.size
+
+
 def overlay_images(chapters):
     os.makedirs(OVERLAYS, exist_ok=True)
     label = pill([LABEL], [font(SANS, 17)], 12, 7, 0, (12, 8, 6, 150), 9)
@@ -94,6 +120,44 @@ def segments():
     return out
 
 
+def timeline(write_list=False):
+    """The recorded segments, their spans on the joined timeline (start, stop, offset), and its end."""
+    segs = segments()
+    if not segs:
+        sys.exit('no frames recorded')
+    spans, offset, last = [], 0.0, None
+    out = open(os.path.join(FRAMES, 'list.txt'), 'w') if write_list else None
+    if out:
+        out.write('ffconcat version 1.0\n')
+    for name, times, stop in segs:
+        spans.append((times[0], stop, offset))
+        if out:
+            for i, t in enumerate(times):
+                nxt = times[i + 1] if i + 1 < len(times) else stop
+                # Real gaps are kept (a reload can pause the screencast) so the soundtrack stays in sync.
+                out.write(f"file '{name}/f{i:05d}.jpg'\nduration {max(1 / 60, nxt - t):.4f}\n")
+            last = f"{name}/f{len(times) - 1:05d}.jpg"
+        offset += stop - times[0]
+    if out:
+        out.write(f"file '{last}'\n")
+        out.close()
+    return segs, spans, offset
+
+
+def chapter_times(spans, end):
+    """(output time, title) for each beat in chapters.txt."""
+    chapters = []
+    chapter_file = os.path.join(ROOT, 'chapters.txt')
+    if os.path.exists(chapter_file):
+        for line in open(chapter_file):
+            if '\t' in line:
+                t, text = line.rstrip('\n').split('\t', 1)
+                at = to_output(float(t), spans)
+                if at is not None and at < end:
+                    chapters.append((at, text))
+    return chapters
+
+
 def to_output(t, spans):
     """Maps a wall-clock moment onto the joined timeline (a moment between segments opens the next one)."""
     for t0, t1, offset in spans:
@@ -104,36 +168,16 @@ def to_output(t, spans):
 
 
 def main():
-    segs = segments()
-    if not segs:
-        sys.exit('no frames recorded')
-    spans, offset, last = [], 0.0, None
-    with open(os.path.join(FRAMES, 'list.txt'), 'w') as f:
-        f.write('ffconcat version 1.0\n')
-        for name, times, stop in segs:
-            spans.append((times[0], stop, offset))
-            for i, t in enumerate(times):
-                nxt = times[i + 1] if i + 1 < len(times) else stop
-                # Real gaps are kept (a reload can pause the screencast) so the soundtrack stays in sync.
-                f.write(f"file '{name}/f{i:05d}.jpg'\nduration {max(1 / 60, nxt - t):.4f}\n")
-            last = f"{name}/f{len(times) - 1:05d}.jpg"
-            offset += stop - times[0]
-        f.write(f"file '{last}'\n")
-    end = offset
-
-    chapters = []
-    chapter_file = os.path.join(ROOT, 'chapters.txt')
-    if os.path.exists(chapter_file):
-        for line in open(chapter_file):
-            if '\t' in line:
-                t, text = line.rstrip('\n').split('\t', 1)
-                at = to_output(float(t), spans)
-                if at is not None and at < end:
-                    chapters.append((at, text))
+    segs, spans, end = timeline(write_list=True)
+    chapters = chapter_times(spans, end)
     (label_path, label_size), chapter_images = overlay_images(chapters)
+    newest = max(os.path.getmtime(os.path.join(FRAMES, name, 'times.json')) for name, _, _ in segs)
+    fresh = lambda path: os.path.exists(path) and os.path.getmtime(path) >= newest
+    lines = []
+    if fresh(os.path.join(ROOT, 'narration.json')):
+        lines = json.load(open(os.path.join(ROOT, 'narration.json')))
 
-    args = ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', os.path.join(FRAMES, 'list.txt')]
-    args += ['-loop', '1', '-framerate', '30', '-i', label_path]
+    inputs = [['-f', 'concat', '-safe', '0', '-i', os.path.join(FRAMES, 'list.txt')], ['-loop', '1', '-framerate', '30', '-i', label_path]]
     # A quick dip through black at every cut between segments.
     dips = ''.join(
         f",fade=t=out:st={b - FADE:.3f}:d={FADE}:enable='between(t,{b - FADE:.3f},{b:.3f})'"
@@ -142,30 +186,59 @@ def main():
     )
     graph = [f'[0:v]fps=30,scale={W}:{H}{dips},format=rgba[b0]', f'[1:v]format=rgba[label]', f'[b0][label]overlay=6:H-h-4:shortest=1[b1]']
     base = 'b1'
+
+    def overlay(path, start, dur, x, y, tag):
+        nonlocal base
+        idx = len(inputs)
+        inputs.append(['-loop', '1', '-framerate', '30', '-t', f'{dur:.2f}', '-i', path])
+        graph.append(
+            f'[{idx}:v]format=rgba,fade=t=in:st=0:d=0.3:alpha=1,fade=t=out:st={max(0.0, dur - 0.35):.2f}:d=0.35:alpha=1,'
+            f'setpts=PTS-STARTPTS+{start:.3f}/TB[{tag}]'
+        )
+        graph.append(f"[{base}][{tag}]overlay={x}:{y}:eof_action=pass:enable='between(t,{start:.3f},{start + dur:.3f})'[o{tag}]")
+        base = f'o{tag}'
+
     for k, ((start, text), (path, size, card)) in enumerate(zip(chapters, chapter_images)):
         nxt = chapters[k + 1][0] if k + 1 < len(chapters) else end
         dur = max(1.5, min(CHAPTER_SECONDS if not card else 6.0, nxt - start - 0.2))
-        args += ['-loop', '1', '-framerate', '30', '-t', f'{dur:.2f}', '-i', path]
-        idx = 2 + k
         x, y = ((W - size[0]) // 2, (H - size[1]) // 2 - 40) if card else (12, 8)
-        graph.append(
-            f'[{idx}:v]format=rgba,fade=t=in:st=0:d=0.35:alpha=1,fade=t=out:st={dur - 0.45:.2f}:d=0.45:alpha=1,'
-            f'setpts=PTS-STARTPTS+{start:.3f}/TB[c{k}]'
-        )
-        graph.append(f"[{base}][c{k}]overlay={x}:{y}:eof_action=pass:enable='between(t,{start:.3f},{start + dur:.3f})'[b{k + 2}]")
-        base = f'b{k + 2}'
+        overlay(path, start, dur, x, y, f'c{k}')
+    for i, line in enumerate(lines):
+        path, size = caption_image(line['text'], i)
+        start, stop = line['start'], min(end, line['end'] + 0.35)
+        if start < end:
+            overlay(path, start, stop - start, (W - size[0]) // 2, H - size[1] - 40, f'n{i}')
     graph.append(f'[{base}]format=yuv420p[v]')
-    audio = os.path.join(ROOT, 'audio.wav')
-    newest = max(os.path.getmtime(os.path.join(FRAMES, name, 'times.json')) for name, _, _ in segs)
-    has_audio = os.path.exists(audio) and os.path.getmtime(audio) >= newest
-    if has_audio:
-        args += ['-i', audio]
+
+    game = os.path.join(ROOT, 'audio.wav')
+    voice = os.path.join(ROOT, 'voice.wav')
+    has_game, has_voice = fresh(game), fresh(voice) and bool(lines)
+    audio_out = None
+    if has_game:
+        inputs.append(['-i', game])
+        gi = len(inputs) - 1
+        audio_out = f'{gi}:a'
+    if has_voice:
+        inputs.append(['-i', voice])
+        vi = len(inputs) - 1
+        if has_game:
+            # The game's sound dips under the voice, then comes back up.
+            graph.append(f'[{vi}:a]asplit=2[vkey][vmix]')
+            graph.append(f'[{gi}:a][vkey]sidechaincompress=threshold=0.02:ratio=9:attack=20:release=450[duck]')
+            graph.append('[duck][vmix]amix=inputs=2:normalize=0:duration=first[aout]')
+            audio_out = '[aout]'
+        else:
+            audio_out = f'{vi}:a'
+    args = ['ffmpeg', '-y', '-loglevel', 'error'] + [a for inp in inputs for a in inp]
     args += ['-filter_complex', ';'.join(graph), '-map', '[v]']
-    if has_audio:
-        args += ['-map', f'{2 + len(chapters)}:a', '-c:a', 'aac', '-b:a', '192k']
+    if audio_out:
+        args += ['-map', audio_out, '-c:a', 'aac', '-b:a', '192k']
     args += ['-t', f'{end + 1 / 30:.3f}', '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-r', '30', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', OUT]
     subprocess.run(args, check=True)
-    print(f'wrote {os.path.relpath(OUT)}: {end:.1f} s from {len(segs)} segments, {len(chapters)} chapters, audio {"yes" if has_audio else "no"}')
+    print(
+        f'wrote {os.path.relpath(OUT)}: {end:.1f} s from {len(segs)} segments, {len(chapters)} chapters, '
+        f'{len(lines)} captions, game audio {"yes" if has_game else "no"}, voice {"yes" if has_voice else "no"}'
+    )
 
 
 if __name__ == '__main__':

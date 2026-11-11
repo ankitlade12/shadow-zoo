@@ -3,7 +3,7 @@
 Make shadow puppets with your hands on your real wall, and watch them come alive.
 
 **Play it:** open **https://ankitlade12.github.io/shadow-zoo/** in Meta Quest Browser on a Quest 3 or 3S. On a computer, the same link opens a [desktop preview](#desktop-preview) in Meta's WebXR emulator.
-**Watch it:** [`docs/video/shadow-zoo-demo.mp4`](docs/video/shadow-zoo-demo.mp4) (1:36, IWSDK emulator footage).
+**Watch it:** [`docs/video/shadow-zoo-demo.mp4`](docs/video/shadow-zoo-demo.mp4) (2:08, narrated, IWSDK emulator footage). Screenshots: [`docs/gallery/`](docs/gallery/).
 
 Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's Immersive Web SDK (WebXR). A warm virtual lantern shines from behind you, and your tracked hands cast soft shadows onto the wall you are facing. When your hand's shadow matches a creature's glowing outline, it wriggles free and joins a living zoo on your wall. You can feed it fireflies, pet it with your shadow, or "wear" it and puppeteer its voice. The zoo is still there the next time you come back.
 
@@ -90,13 +90,17 @@ The submission video is footage from the IWSDK emulator, and it says so on scree
 ./node_modules/.bin/iwsdk dev up --ai-mode agent --headless --allow-browser-automation --screenshot-width 1280 --screenshot-height 720
 bash scripts/demo.sh                                                    # plays and records the scripted demo
 ./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
+python3 scripts/narrate.py                                             # the voiceover, from scripts/narration.json
 python3 scripts/encode.py                                              # writes docs/video/shadow-zoo-demo.mp4
+python3 scripts/gallery.py                                             # captioned screenshots in docs/gallery/
 ```
 
 - **Scripted play.** `demo.sh` plays the game with built-in emulator hand poses, smooth hand motions and pinches. It also clicks "Light the lantern" for real. No game code is bypassed.
 - **Recording.** `record.mjs` records the page with the Chrome DevTools screencast. It connects to the dev server's local automation endpoint, so it has no time limit. It also streams the game's dev-mode console lines to a live log, which the demo script waits on.
 - **Audio.** The screencast captures no audio. `render-audio.mjs` rebuilds the soundtrack offline from the game's own sound recipes, placed at the moments and wall positions the game traced in dev mode.
-- **Encoding.** `encode.py` joins the segments, adds the chapter titles and an "emulator footage" label, and muxes the audio. It needs ffmpeg and Pillow.
+- **Voiceover.** `narrate.py` voices `scripts/narration.json` with macOS text to speech (Aman, an Indian English male voice), places each line after its beat without overlaps, and writes the voice track and its timing.
+- **Encoding.** `encode.py` joins the segments and adds the chapter titles, a caption for each voiceover line and an "emulator footage" label. It mixes the voice over the game's sound, which dips under it. It needs ffmpeg and Pillow.
+- **Screenshots.** `gallery.py` picks moments from the recording (a beat, or the first game event after it), crops them to 3:2 and adds a caption.
 
 ## How it works
 

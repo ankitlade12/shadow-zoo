@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Plays the scripted demo for the submission video in the IWSDK emulator while scripts/record.mjs
 # records it. The beats:
-#   - a first-time player: the lantern, the rabbit, feeding, petting, two more visitors, then
-#     wearing the dog;
+#   - a first-time player: the lantern, the rabbit, feeding, petting, two more visitors, wearing the
+#     dog, feeding the zoo, then the two-handed bird;
+#   - the last creature found: the zoo is complete;
 #   - a returning player: the welcome, the full zoo, today's visitor and a trick;
 #   - the hands-only menu.
 # It drives the game through built-in emulator hand poses, smooth hand motions and pinches only;
@@ -83,6 +84,21 @@ shape() { # pose-fields fingers palm [x y z] [seconds]: reshape and move togethe
   wait "$reshaping"
 }
 pinch() { xr select '{"device":"hand-right","duration":0.25}'; }
+left_to() { # x y z fingers palm [seconds]: moves the left wrist like a person would
+  xr animate-to "{\"device\":\"hand-left\",\"anchor\":\"wrist\",\"position\":{\"x\":$1,\"y\":$2,\"z\":$3},\"orientation\":{\"fingers\":$4,\"palm\":$5},\"duration\":${6:-1},\"easing\":\"minimum-jerk\"}"
+}
+make_bird() { # both hands open, thumbs hooked at the comfortable point, fingers fanned out as wings
+  local since
+  since=$(now_ms)
+  xr set-hand-pose '{"device":"hand-left","poseId":"open","duration":0.8}' &
+  local left_shape=$!
+  left_to 0.061 "$WRIST_Y" "$WRIST_Z" '[-1,0.45,0]' '[0,0,-1]' 1.2 &
+  local left_move=$!
+  shape '"poseId":"open"' '[1,0.45,0]' '[0,0,-1]' 0.039 "$WRIST_Y" "$WRIST_Z" 1.2
+  wait "$left_shape" "$left_move"
+  wait_for 'sound reveal ' "$since" 12 && echo "  bird came alive"
+}
+left_rest() { left_to -0.3 0.95 -0.05 '[-0.3,0.2,-1]' '[0,-1,0]' 1.0; }
 hands_rest() {
   xr set-transform '{"device":"hand-left","anchor":"wrist","position":{"x":-0.3,"y":0.95,"z":-0.05},"orientation":"auto"}'
   xr set-hand-pose '{"device":"hand-right","poseId":"default"}'
@@ -223,11 +239,52 @@ done
 echo "  barks: $(logs 'sound voice-dog ' "$since" count), flees: $(logs 'sound flee ' "$since" count)"
 pause 1.5
 lower_hand
+pause 0.5
+
+# 7. Feed the zoo: three fireflies, three meals, and the next visitor comes.
+since_zoo=$(now_ms)
+shape '"poseId":"point"' '[0,1,0]' '[0,0,-1]' -0.08 1.18 -0.4 0.9
+pinch
+pause 1.2
+hand_to 0.02 1.2 -0.4 '[0,1,0]' '[0,0,-1]' 0.8
+pinch
+pause 1.2
+hand_to 0.1 1.18 -0.4 '[0,1,0]' '[0,0,-1]' 0.8
+pinch
+wait_for 'visitor bird' "$since_zoo" 30 && echo "  meals: $(logs 'sound eat ' "$since_zoo" count)"
+lower_hand
+
+# 8. Two hands: the bird. Hook your thumbs and it takes wing.
+chapter "Two hands make a bird, and it flies"
+make_bird
 pause 1
+lower_hand &
+lowering=$!
+left_rest
+wait "$lowering"
+pause 3
 
 rec pause
 
-# 7. Tomorrow: the zoo remembers (the video dips through black to the next day).
+# 9. The last creature: the zoo is complete (a zoo with six of seven, after a little play).
+echo "== the last creature"
+SEED=almost $B browser run scripts/seed-save.mjs >/dev/null 2>&1
+landing_ready
+since=$(now_ms)
+enter
+v=$(wait_visitor "$since" 70)
+echo "  visitor: $v"
+pause 1
+rec resume
+chapter "Find all seven, and your zoo is complete"
+make_creature turtle
+pause 1
+lower_hand
+pause 4
+
+rec pause
+
+# 10. Tomorrow: the zoo remembers (the video dips through black to the next day).
 echo "== a returning player"
 SEED=returning $B browser run scripts/seed-save.mjs >/dev/null 2>&1
 landing_ready
@@ -254,7 +311,7 @@ case $v in
 esac
 pause 2.5
 
-# 8. A creature with three hearts does a trick when petted.
+# 11. A creature with three hearts does a trick when petted.
 chapter "Pet a friend with three hearts and it does a trick"
 since=$(now_ms)
 shape '"poseId":"open"' '[0.05,1,0]' '[0,0,-1]' 0.0 1.17 -0.4 1.0
@@ -265,7 +322,7 @@ wait_for 'sound pet ' "$since" 4 || {
 pause 2
 lower_hand
 
-# 9. The menu: point and pinch, no controllers.
+# 12. The menu: point and pinch, no controllers.
 chapter "A hands-only menu: point and pinch"
 target() {
   $B xr list-targets 2>/dev/null | python3 -I -c "
@@ -294,8 +351,8 @@ press close
 pause 0.5
 lower_hand
 
-# 10. Title card over the zoo.
-chapter "=Shadow Zoo|Hand shadows that come alive on your wall|WebXR for Meta Quest, made with the Immersive Web SDK"
+# 13. Title card over the zoo.
+chapter "=Shadow Zoo|Hand shadows that come alive on your wall|Play free on Meta Quest: ankitlade12.github.io/shadow-zoo"
 pause 7
 
 rec stop

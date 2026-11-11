@@ -1,0 +1,85 @@
+{
+  "voice": "Aman (English (India))",
+  "lines": [
+    {
+      "at": "start",
+      "after": 0.4,
+      "text": "Remember making shadow animals on the wall as a kid? In Shadow Zoo, they come alive."
+    },
+    {
+      "at": "Your hands cast shadows on your own wall",
+      "after": 0.6,
+      "text": "Light the lantern, and your real hands cast shadows on your real wall."
+    },
+    {
+      "at": "Make the shape it shows, and it comes alive",
+      "after": 0.3,
+      "text": "A glowing outline appears. Shape your hand to match it, and the rabbit wriggles free!"
+    },
+    {
+      "at": "Feed it: a pinch releases a firefly",
+      "after": 0.3,
+      "text": "Pinch to release a firefly, and watch it chase it down."
+    },
+    {
+      "at": "Pet it: let your shadow rest on it",
+      "after": 0.3,
+      "text": "Rest your shadow on it to pet it. Hearts grow, and friends learn tricks."
+    },
+    {
+      "at": "Every visitor is a new shadow to learn",
+      "after": 0.3,
+      "text": "Every visitor is a new shadow puppet to master. A dog. A crocodile."
+    },
+    {
+      "at": "Wear a creature: snap its jaw and it speaks",
+      "after": 0.3,
+      "text": "Make a shape you have already found, and you become it. Snap the dog's jaw, and it barks!"
+    },
+    {
+      "at": "Wear a creature: snap its jaw and it speaks",
+      "after": 8.5,
+      "text": "Feed the whole zoo, and new visitors keep coming."
+    },
+    {
+      "at": "Two hands make a bird, and it flies",
+      "after": 0.3,
+      "text": "And then, the classic. Hook your thumbs, spread your fingers, and the bird takes wing!"
+    },
+    {
+      "at": "Find all seven, and your zoo is complete",
+      "after": 0.3,
+      "text": "Find all seven creatures, and the whole zoo celebrates. Your lantern turns gold."
+    },
+    {
+      "at": "Come back tomorrow: your zoo remembers you",
+      "after": 0.3,
+      "text": "Come back tomorrow. Your zoo remembers you, and your streak keeps the lantern warm."
+    },
+    {
+      "at": "Daily visitors bring a twist",
+      "after": 0.3,
+      "text": "Every day brings a visitor with a twist. This big one needs your hand closer to the light."
+    },
+    {
+      "at": "Today's visitor",
+      "after": 0.3,
+      "text": "Every day brings a visitor with a twist. This shy one needs you to hold perfectly still."
+    },
+    {
+      "at": "Pet a friend with three hearts and it does a trick",
+      "after": 0.3,
+      "text": "Pet a friend with three hearts, and it does a trick for you."
+    },
+    {
+      "at": "A hands-only menu: point and pinch",
+      "after": 0.3,
+      "text": "No controllers, ever. Even the menu is just point and pinch."
+    },
+    {
+      "at": "=",
+      "after": 0.5,
+      "text": "Shadow Zoo. Hand shadows that come alive, on your own wall. Play it free on Meta Quest."
+    }
+  ]
+}
