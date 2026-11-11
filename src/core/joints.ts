@@ -27,7 +27,6 @@ export const JOINT_NAMES = [
   'pinky-finger-tip',
 ] as const;
 
-export type JointName = (typeof JOINT_NAMES)[number];
 export const JOINT_COUNT = JOINT_NAMES.length;
 export const JOINT_INDEX: Readonly<Record<string, number>> = Object.fromEntries(
   JOINT_NAMES.map((name, i) => [name, i]),

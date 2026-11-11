@@ -1,146 +1,181 @@
 # Shadow Zoo
 
-Make shadow puppets with your hands on your real wall, and watch them come alive.
+Make shadow animals with your bare hands on your real wall, and watch them come alive.
 
-**Play it:** open **https://ankitlade12.github.io/shadow-zoo/** in Meta Quest Browser on a Quest 3 or 3S. On a computer, the same link opens a [desktop preview](#desktop-preview) in Meta's WebXR emulator.
-**Watch it:** [`docs/video/shadow-zoo-demo.mp4`](docs/video/shadow-zoo-demo.mp4) (2:08, narrated, IWSDK emulator footage). Screenshots: [`docs/gallery/`](docs/gallery/).
+> Every kid has made a rabbit on the wall with a flashlight. Shadow Zoo is what happens when the rabbit hops off your hand, and stays.
 
-Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's Immersive Web SDK (WebXR). A warm virtual lantern shines from behind you, and your tracked hands cast soft shadows onto the wall you are facing. When your hand's shadow matches a creature's glowing outline, it wriggles free and joins a living zoo on your wall. You can feed it fireflies, pet it with your shadow, or "wear" it and puppeteer its voice. The zoo is still there the next time you come back.
+Entry for the Meta VR Start Developer Competition 2026: Gaming track, New Experience division.
 
-## How to play
+![Shadow Zoo](docs/thumbnail-youtube.jpg)
 
-1. Open the game in **Meta Quest Browser**, sit facing a wall in a lit room, and put your controllers down.
-2. Press **Light the lantern**. A pool of warm light appears on the wall in front of you.
-3. Shape your hand until its shadow fits the glowing outline. A ghost hand shows you how.
-4. **Pinch** to release a firefly; your creatures chase and eat it. **Rest your shadow** on a creature to pet it. Hearts grow, and at three hearts it learns a trick.
-5. Make the shape of a creature you've already met to **wear it**: snap its jaw, ears or tail to make its voice. Your dog's bark scatters the rabbits.
-6. Come back tomorrow. Your zoo is saved, your streak warms the lantern, and a daily visitor brings a twist.
+| | |
+|---|---|
+| Play it | https://ankitlade12.github.io/shadow-zoo/ (Meta Quest Browser on Quest 3 or 3S) |
+| Demo video | [docs/video/shadow-zoo-demo.mp4](docs/video/shadow-zoo-demo.mp4) (2:08, narrated and captioned) |
+| No headset? | The same link opens a desktop preview: your real hands through a webcam, or the mouse |
+| Built with | Meta's Immersive Web SDK (WebXR), three.js, TypeScript, Web Audio |
 
-**Creatures:** rabbit, dog, crocodile, peacock, spider and turtle are one-handed, and either hand works. The bird takes both hands: hook your thumbs together and spread your fingers as wings, then watch it fly around the light.
+## The idea
 
-**Comfort and access:**
-- Seated play, and the light pool stays within a comfortable field of view.
-- No reading is required: captions are short, and a ghost hand demonstrates every shape.
-- The menu (pinch the "Menu" chip on the wall) has:
-  - assist level (gentle matching relaxes further over time);
-  - hand preference;
-  - sound on or off;
-  - reduced motion;
-  - a narrow view for Meta VR Glasses;
-  - Re-light (moves the stage to the wall you face);
-  - Reset zoo.
+Shadow puppets are the oldest mixed reality there is: a light, a wall and your hands. Shadow Zoo puts a warm virtual lantern behind you, lights the wall you are facing, and lets the shadows your real hands cast come alive. It only works with your real room and your real hands. Switch passthrough off and there is no game.
 
-## Desktop preview
+## Who it's for
 
-No headset? On a computer, the same link opens a desktop preview. It runs Meta's WebXR emulator (IWER, as the IWSDK dev server runs it) with a virtual living room. The game itself is hands-only on Quest, and the preview offers two ways in.
+**Players.** Anyone who has ever made a rabbit on the wall, from a five-year-old to a grandparent. It's seated, hands-only and playable within two feet, with a complete moment in under ten minutes. No reading is required: a glowing ghost hand demonstrates every shape.
 
-**With your real hands (camera).** Press **Light the lantern, with my real hands** and hold a hand up to your camera. MediaPipe hand tracking runs in the page and follows both hands. Your real hand's shape casts the shadow, so you make the creatures the same way you would on a headset. A small mirrored camera view shows what's tracked.
-- Move across the picture to move the shadow; move your hand back toward you for a bigger shadow.
-- Pinch for a firefly. Open the wall's Menu with the mouse.
-- The camera picture never leaves your device. The tracking engine and model ship with the page; nothing is recorded or sent. The camera turns off when you leave.
+**Judges.** It's one link with nothing to install. On a Quest it plays in Meta Quest Browser. Without a headset, the same link runs a desktop preview in Meta's WebXR emulator.
 
-**With the mouse.** An emulated hand follows the cursor:
+## Screenshots
 
-| Control | What it does |
-| --- | --- |
-| Move the mouse | Moves your hand; its shadow lands under the cursor |
-| 1 to 7 | Makes the rabbit, dog, crocodile, peacock, spider, turtle or two-handed bird shape |
-| 0 | Opens the hand, for petting |
-| Click | Pinches: releases a firefly, or presses a menu button |
-| Hold Space | Snaps the jaw (or ears, legs, head) of a creature you're wearing |
-| Scroll up or down | Moves the hand nearer to or farther from the light, for a bigger or smaller shadow |
-| Esc | Leaves |
+| | |
+|---|---|
+| ![Light the lantern](docs/gallery/02-lantern.png) | ![It comes alive](docs/gallery/03-rabbit.png) |
+| Light the lantern: your real hands cast shadows on your real wall. | Shape your hand to fit the glowing outline, and the creature comes alive. |
+| ![Feed it](docs/gallery/04-feed.png) | ![Wear a creature](docs/gallery/05-wear.png) |
+| Pinch to release a firefly, and your creatures chase it down. | Make a creature you've found and wear it: snap the dog's jaw and it barks. |
+| ![Two hands, one bird](docs/gallery/06-bird.png) | ![Your zoo is complete](docs/gallery/07-complete.png) |
+| The classic: hook your thumbs, spread your fingers, and the bird takes wing. | Find all seven creatures and the lantern turns gold. |
+| ![Come back tomorrow](docs/gallery/08-welcome.png) | ![No controllers, ever](docs/gallery/09-menu.png) |
+| Your zoo remembers you, and a daily visitor brings a twist. | Even the menu is point and pinch. |
 
-- The page checks `navigator.xr.isSessionSupported('immersive-ar')` and loads the emulator only in browsers that can't start mixed reality. Meta Quest Browser plays natively and never downloads it.
-- The emulated hand takes the game's own creature poses, and camera hands are mapped into the room at the game's comfortable hand point, so the same shadow matching runs as on a headset.
-- Checked in Chrome, Safari (WebKit) and Firefox.
-- Touch-only devices show a note instead, since they have no mouse to steer the hand.
+All screenshots are taken from the demo video: IWSDK WebXR emulator footage with emulated hand tracking.
 
-## Run it locally
+## How it plays
 
-Requirements: Node 20.19+, 22.12+ or 24+.
-
-```bash
-npm install
-npm run dev        # IWSDK dev server with the WebXR emulator (Meta Quest 3, synthetic living room)
-npm test           # unit and integration tests (Vitest)
-npm run typecheck
-npm run build      # static site in dist/
-```
-
-The dev server is managed by the IWSDK CLI. To test without a headset, use the emulator. For example:
-
-```bash
-./node_modules/.bin/iwsdk dev up --ai-mode agent --headless
-./node_modules/.bin/iwsdk xr enter
-./node_modules/.bin/iwsdk xr set-input-mode --input-json '{"mode":"hand"}'
-./node_modules/.bin/iwsdk xr set-hand-pose --input-json '{"device":"hand-right","poseId":"peace"}'
-./node_modules/.bin/iwsdk browser screenshot
-```
-
-To develop with a fixed synthetic hand shape, set `VITE_TESTPOSE=rabbit` (or another creature) when starting the dev server.
-
-`scripts/drill.sh` plays a fresh game with built-in emulator poses and times each creature's match. `scripts/seed-save.mjs` loads a first-time, returning or full-zoo save into the emulator's browser.
-
-### Demo video
-
-The submission video is footage from the IWSDK emulator, and it says so on screen. To rebuild it:
-
-```bash
-./node_modules/.bin/iwsdk dev up --ai-mode agent --headless --allow-browser-automation --screenshot-width 1280 --screenshot-height 720
-bash scripts/demo.sh                                                    # plays and records the scripted demo
-./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
-python3 scripts/narrate.py                                             # the voiceover, from scripts/narration.json
-python3 scripts/encode.py                                              # writes docs/video/shadow-zoo-demo.mp4
-python3 scripts/gallery.py                                             # captioned screenshots in docs/gallery/
-```
-
-- **Scripted play.** `demo.sh` plays the game with built-in emulator hand poses, smooth hand motions and pinches. It also clicks "Light the lantern" for real. No game code is bypassed.
-- **Recording.** `record.mjs` records the page with the Chrome DevTools screencast. It connects to the dev server's local automation endpoint, so it has no time limit. It also streams the game's dev-mode console lines to a live log, which the demo script waits on.
-- **Audio.** The screencast captures no audio. `render-audio.mjs` rebuilds the soundtrack offline from the game's own sound recipes, placed at the moments and wall positions the game traced in dev mode.
-- **Voiceover.** `narrate.py` voices `scripts/narration.json` with macOS text to speech (Aman, an Indian English male voice), places each line after its beat without overlaps, and writes the voice track and its timing.
-- **Encoding.** `encode.py` joins the segments and adds the chapter titles, a caption for each voiceover line and an "emulator footage" label. It mixes the voice over the game's sound, which dips under it. It needs ffmpeg and Pillow.
-- **Screenshots.** `gallery.py` picks moments from the recording (a beat, or the first game event after it), crops them to 3:2 and adds a caption.
+1. **Light the lantern.** The game finds the wall you face and lights a warm pool on it.
+2. **Make the shape.** A glowing outline appears. Shape your hand until its shadow fits, and the creature wriggles free. There are seven to discover: rabbit, dog, crocodile, peacock, spider, turtle, and the bird, which takes both hands.
+3. **Play with them.**
+   - **Feed:** pinch to release a firefly.
+   - **Pet:** rest your shadow on a creature to earn hearts. At three hearts it learns a trick.
+   - **Wear:** make the shape of a creature you've found and become it. Snap its jaw and it speaks; the dog's bark scatters the rabbits.
+4. **Grow your zoo.** Every match earns up to three stars, and a row of silhouettes on the wall shows who is still missing. Finding the last one sets off a finale and turns the lantern gold.
+5. **Come back tomorrow.** Your zoo is saved on your device, your streak warms the lantern, and a daily visitor brings a twist: a shy one you must hold perfectly still, or a big one that needs your hand closer to the light.
 
 ## How it works
 
-```
-src/core/     pure game math and logic (no WebXR; unit-tested)
-  poses        hand joint sets built on the WebXR emulator's hand skeleton
-  projector    point-light projection of hand bones onto the wall plane
-  silhouette   capsule rasterizer, normalized IoU plus a radial signature for shape matching
-  library      the seven creatures: hand shapes (one hand, or two for the bird), actions, motion styles
-  stage        wall choice from plane detection, light pool, lantern placement
-  creature, fireflies, particles, interact, puppet, matcher, save, daily
-src/game/     the game: hand shadows, visitors, wearing, the zoo, progression, onboarding, session
-src/render/   shadow canvas (2D mask pass plus one composite quad), captions, ghost hand
-src/preview/  desktop preview: browser check, emulator start, mouse and keyboard controls, hand placement
-src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound, preview
-```
+| Piece | What it does | Where |
+|---|---|---|
+| Wall | Plane detection finds the wall you face (labeled walls first, then large planes, so a picture frame never wins) and builds the stage, the light pool and the lantern on it. If no wall is found, the game falls back to a paper screen in front of you. | [stage.ts](src/core/stage.ts), [StageSystem.ts](src/systems/StageSystem.ts) |
+| Hands to shadows | All 25 joints of each tracked hand are projected from the lantern onto the wall as tapered capsules. They're drawn into a small 2D mask in one instanced pass, then composited over passthrough with a single quad. | [HandSystem.ts](src/systems/HandSystem.ts), [projector.ts](src/core/projector.ts), [ShadowCanvas.ts](src/render/ShadowCanvas.ts) |
+| Candlelight | Shadow edges soften with distance from the wall, the way a small flame's do. The flame flickers and sways, and dust drifts in the beam. | [lantern.ts](src/core/lantern.ts), [Dust.ts](src/render/Dust.ts) |
+| Matching | Shadows are normalized for position and size, then scored by overlap plus a 64-direction radial signature that finds the rotation and checks the ears, jaws and legs. A short hold and a gently relaxing threshold keep it fair. Two-handed creatures score both hands together. | [silhouette.ts](src/core/silhouette.ts), [matcher.ts](src/core/matcher.ts), [Visitors.ts](src/game/Visitors.ts) |
+| Creatures | Each creature is itself a hand shadow that blends between a base pose and an action pose, with its own gait: hop, trot, slither, strut, dangle, creep or fly. As the zoo fills, everyone eases to a shared size and spreads out along the ground. | [library.ts](src/core/library.ts), [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [crowd.ts](src/core/crowd.ts) |
+| Wearing | When your shadow matches a creature you've found, you wear it; closing its jaw (or ears, legs or head) gives it a voice. | [Puppeteer.ts](src/game/Puppeteer.ts), [puppet.ts](src/core/puppet.ts) |
+| Progress | Guided first visitors, stars, the zoo row, the finale, the streak and daily twists, saved to the device. | [Progression.ts](src/game/Progression.ts), [rewards.ts](src/game/rewards.ts), [daily.ts](src/core/daily.ts), [save.ts](src/core/save.ts), [Session.ts](src/game/Session.ts) |
+| Teaching | Short captions and a glowing ghost hand that demonstrates each shape, including both hands for the bird. | [Onboarding.ts](src/game/Onboarding.ts), [GhostHand.ts](src/render/GhostHand.ts) |
+| Menu | A chip on the wall opens a panel near you: assist level, hand, sound, reduced motion, a narrow view for Meta VR Glasses, Re-light and Reset. It's operated by pointing and pinching. | [MenuSystem.ts](src/systems/MenuSystem.ts), [menu.uikitml](public/ui/menu.uikitml), [Settings.ts](src/game/Settings.ts) |
+| Sound | Every sound is synthesized with the Web Audio API and placed on the wall in 3D, so there are no audio files. | [AudioEngine.ts](src/audio/AudioEngine.ts), [recipes.ts](src/audio/recipes.ts) |
+| Desktop preview | Browsers that can't start mixed reality load Meta's WebXR emulator with a virtual living room, then play with real hands through the webcam (MediaPipe, on the device) or with the mouse. Quest Browser never downloads any of it. | [detect.ts](src/preview/detect.ts), [emulator.ts](src/preview/emulator.ts), [tracker.ts](src/preview/camera/tracker.ts), [PreviewSystem.ts](src/systems/PreviewSystem.ts) |
 
-- **Shadows.** Each tracked hand's 25 joints are projected from a virtual lantern onto the stage plane as tapered capsules. They're drawn into a small 2D mask once per frame, then composited over passthrough with a single wall-aligned quad.
-- **Matching.** The hand's shadow is normalized for position and size, then compared with each creature's silhouette. The comparison combines overlap (IoU) with a 64-direction radial signature, which finds the rotation and penalizes misplaced ears, jaws or legs. A short hold and a gently relaxing threshold keep it fair.
-- **Creatures.** Creatures are themselves hand shadows. Each one blends between its base pose and an action pose (ear twitch, jaw snap, tail fan, leg curl, head tuck) and moves with its own gait.
-- **A zoo that makes room.**
-  - A creature appears at the size your hand cast it. As the zoo fills, everyone eases to a shared smaller size, so a full zoo still reads as separate animals.
-  - Walkers spread into the gaps between their neighbors.
-  - A creature holds still while your shadow rests on it.
-- **Audio.** All sound is synthesized with the Web Audio API and placed on the wall in 3D, so there are no audio assets.
+## Try it (for judges)
+
+**On Meta Quest 3 or 3S**
+
+1. Open https://ankitlade12.github.io/shadow-zoo/ in Meta Quest Browser.
+2. Sit facing a wall in a lit room and put your controllers down.
+3. Press **Light the lantern**, and allow hand tracking and spatial data when asked.
+4. A rabbit outline appears within a few seconds. Make the rabbit (index and middle fingers up, the others folded) and it comes alive. The captions take it from there.
+
+**On a computer**
+
+Open the same link in Chrome, Edge, Safari or Firefox.
+
+- **Real hands:** press **Light the lantern, with my real hands** and hold a hand up to your camera. Make a V for the rabbit. The camera picture stays on your device.
+- **Mouse:** press **or play with the mouse**. Move the mouse to move your shadow and press **1** to **7** to make the shapes: 1 is the rabbit, and 7 is the two-handed bird. Click to pinch, hold Space to snap a worn creature's jaw, and scroll for a bigger shadow. **Esc** leaves.
+
+## How Shadow Zoo meets the judging criteria
+
+### Innovation and creativity
+
+- The input is the shape of your hand, not a gesture or a button. Each creature is a real shadow puppet you can make in any room, and two hands make the bird.
+- Passthrough and scene understanding are the game: the lantern lights the wall you face, and moving your hand toward it grows and softens its shadow, as with real light.
+- The game is built to bring you back: a zoo that remembers you, a streak that warms the lantern, and daily visitors with twists.
+
+### Experience design
+
+| The competition's test | Shadow Zoo |
+|---|---|
+| Hands-first: never pair a controller | Every interaction is a hand shape, a pinch, a resting shadow or point-and-pinch on the menu. |
+| Airplane seat: everything within two feet | It's played seated. The comfortable hand point is 40 cm in front of you and 30 cm below your eyes. |
+| One bus stop: a complete moment in under ten minutes | The first creature comes alive within the first minute; a session is a few minutes. |
+| Take it away: original, not a wrapper | It has no third-party service. The shadow engine, matching, creatures and sound are all built for this game. |
+| FoV-aware | The light pool stays within about 40 by 30 degrees, and a narrow view for Meta VR Glasses is in the menu. |
+
+### Technical implementation
+
+- WebXR hand tracking (all 25 joints, with radii) and plane detection through the Immersive Web SDK, with semantic wall labels when available.
+- It's built to hold up in rooms we never tested: it prefers real walls by size and label, ignores pictures and windows, and falls back to a paper screen.
+- It's light enough for standalone hardware: one instanced mask pass of at most 1,024 capsules, one composite quad, one 64-point dust draw, and no image or audio files to load.
+- There are 188 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
+
+### Polish and presentation
+
+- One art direction throughout: warm candlelight, soft shadows, cream type, and the same lantern glow from the landing page to the finale.
+- Sound is synthesized and placed in space: crickets from the wall, a voice for each creature, chirps for fireflies.
+- The [demo video](docs/video/shadow-zoo-demo.mp4) is real gameplay with a narrated walkthrough and captions.
+
+## What's real and what's emulated
+
+- **Real:** the game, the hosted build, and everything in the video and screenshots is real gameplay of this code.
+- **Emulated:** it was built and tested in Meta's IWSDK WebXR emulator (IWER), with emulated hand tracking in a virtual living room. The video says so on screen. Its voiceover is macOS text to speech (an Indian English voice), and its game sound is rebuilt offline from the game's own sound engine at the moments the game played it.
+- **Not yet verified:** a physical Quest. Real hand-tracking noise, passthrough contrast in real rooms and on-device frame rate still need a headset test.
+
+## Limitations
+
+- It hasn't been tested on a physical headset yet (see above).
+- The zoo is saved only in this browser on this device. There are no accounts and no sync between devices.
+- The desktop preview is a convenience for people without a headset. The game is designed for tracked hands on Quest.
 
 ## Privacy
 
-- Shadow Zoo stores your progress and settings only in this browser's `localStorage` on your device.
-- It has no accounts, analytics, network APIs or AI services.
-- The page loads its own code from GitHub Pages. IWSDK also fetches the standard WebXR hand model from the jsDelivr CDN when a hand appears.
-- Hand-joint data is used only in memory to draw shadows and is never stored or sent anywhere.
-- In the desktop preview, real hands are optional. If you choose them, the camera picture is analyzed in the page by MediaPipe hand tracking, which ships with the site. Pictures are never stored or sent, and the camera turns off when you leave.
+- Progress and settings are saved only in this browser's `localStorage`. There are no accounts, analytics or AI services.
+- Hand joints are used in memory to draw shadows and are never stored or sent.
+- In the desktop preview, camera hands are optional. The picture is analyzed in the page and is never stored or sent, and the camera turns off when you leave.
 
-## Status and limits
+## Run locally
 
-- Built and tested in the IWSDK WebXR emulator: synthetic room, emulated hand tracking, scripted hand poses. No physical Quest headset was available during development.
-- Real hand-tracking noise, passthrough contrast in real rooms, and on-device frame rate still need confirming on hardware.
-- Evidence screenshots and checkpoint reports are in `docs/`.
+Requires Node 20.19+, 22.12+ or 24+.
+
+```bash
+npm install
+npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
+npm test             # 188 tests (Vitest)
+npm run typecheck
+npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
+```
+
+`bash scripts/drill.sh` plays a fresh game in the emulator with built-in hand poses and times every creature's match. It needs a headless dev server: `./node_modules/.bin/iwsdk dev up --ai-mode agent --headless`.
+
+**Rebuilding the demo video and screenshots** (ffmpeg and Pillow required):
+
+```bash
+./node_modules/.bin/iwsdk dev up --ai-mode agent --headless --allow-browser-automation --screenshot-width 1280 --screenshot-height 720
+bash scripts/demo.sh                                                  # plays and records the scripted demo
+./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
+python3 scripts/narrate.py                                           # the voiceover, from scripts/narration.json
+python3 scripts/encode.py                                            # docs/video/shadow-zoo-demo.mp4, with captions
+python3 scripts/gallery.py                                           # docs/gallery/ and the thumbnails
+```
+
+## Project structure
+
+```
+src/
+  core/        game math and rules, no WebXR (unit-tested): stage, projection, silhouettes,
+               matching, creatures, crowding, lantern, saves, daily visitors
+  game/        the game: hand shadows, visitors, wearing, the zoo, progression, rewards,
+               onboarding, the session
+  render/      the shadow canvas, captions, ghost hand, dust
+  audio/       the Web Audio engine and synthesized sound recipes
+  systems/     IWSDK ECS systems: hands, stage, menu, game, render, sound, desktop preview
+  preview/     desktop preview: browser check, emulator, mouse controls, camera hands
+  ui/          the landing page
+public/ui/     the menu (UIKitML)
+tests/         Vitest suite
+scripts/       emulator drill and the demo video pipeline
+docs/          demo video, screenshots, thumbnails and the Devpost submission text
+```
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE). Bundled third-party components are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

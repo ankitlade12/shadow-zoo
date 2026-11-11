@@ -3,7 +3,8 @@
 
 Each shot is a moment in docs/video/frames: a beat from chapters.txt, optionally the first game event
 after it (from live.log, such as "sound reveal"), plus a few seconds. The frame is cropped to 3:2 and
-given a caption band. Writes docs/gallery/NN-name.png (PNG, well under Devpost's 5 MB).
+given a caption band. Writes docs/gallery/NN-name.png (PNG, well under Devpost's 5 MB), plus a
+title thumbnail: docs/thumbnail-youtube.jpg (1280x720) and docs/thumbnail-devpost.jpg (3:2).
 Run after scripts/demo.sh. Usage: python3 scripts/gallery.py
 """
 import json
@@ -82,6 +83,48 @@ def captioned(path, title, subtitle):
     return img
 
 
+def thumbnail(path, size, out, zoom=0.78):
+    """A video thumbnail or project card: the shot zoomed onto the light, a bold title on the left."""
+    frame = Image.open(path).convert('RGB')
+    w, h = frame.size
+    # Zoom in so the light pool sits on the right and the left is quiet room for the title.
+    crop_w = int(w * zoom)
+    crop_h = int(crop_w * size[1] / size[0])
+    if crop_h > h:
+        crop_h = h
+        crop_w = int(h * size[0] / size[1])
+    top = max(0, min(h - crop_h, int(h * 0.02)))
+    img = frame.crop((0, top, crop_w, top + crop_h)).resize(size, Image.LANCZOS)
+    W, H = size
+    shade = Image.new('L', size, 0)
+    d = ImageDraw.Draw(shade)
+    for x in range(W):
+        d.line([(x, 0), (x, H)], fill=int(225 * max(0.0, 1 - x / (W * 0.58)) ** 1.2))
+    img = Image.composite(Image.new('RGB', size, (16, 10, 6)), img, shade)
+    k = W / 1280
+    title, sub, badge = font(('/System/Library/Fonts/Supplemental/Iowan Old Style.ttc', 4), int(124 * k)), font(('/System/Library/Fonts/Avenir Next.ttc', 2), int(42 * k)), font(('/System/Library/Fonts/Avenir Next.ttc', 0), int(24 * k))
+    x0, y0 = int(58 * k), int(H * 0.26)
+    # A warm glow behind the title.
+    glow = Image.new('RGBA', size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    for line, dy in (('Shadow', 0), ('Zoo', int(118 * k))):
+        gd.text((x0, y0 + dy), line, font=title, fill=(255, 170, 70, 210))
+    glow = glow.filter(ImageFilter.GaussianBlur(int(18 * k)))
+    img = Image.alpha_composite(img.convert('RGBA'), glow)
+    d = ImageDraw.Draw(img)
+    for line, dy in (('Shadow', 0), ('Zoo', int(118 * k))):
+        d.text((x0, y0 + dy), line, font=title, fill=(255, 238, 210))
+    d.text((x0 + int(4 * k), y0 + int(262 * k)), 'Hand shadows that come alive', font=sub, fill=(250, 222, 186))
+    d.text((x0 + int(4 * k), y0 + int(312 * k)), 'on your real wall', font=sub, fill=(250, 222, 186))
+    label = 'MIXED REALITY  ·  META QUEST'
+    bw = d.textlength(label, font=badge) + int(40 * k)
+    by = y0 - int(74 * k)
+    d.rounded_rectangle((x0, by, x0 + bw, by + int(46 * k)), radius=int(23 * k), fill=(255, 194, 122))
+    d.text((x0 + int(20 * k), by + int(9 * k)), label, font=badge, fill=(38, 23, 12))
+    img.convert('RGB').save(out, quality=92)
+    print(f'  {os.path.relpath(out)}  {size[0]}x{size[1]}  {os.path.getsize(out) // 1024} KB')
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     segs = segments()
@@ -107,6 +150,14 @@ def main():
         made += 1
         print(f'  {os.path.relpath(out)}  {os.path.getsize(out) // 1024} KB')
     print(f'wrote {made} gallery images to docs/gallery')
+    # The thumbnail: the moment the zoo is complete, golden lantern and every creature on the wall.
+    beat = 'Find all seven, and your zoo is complete'
+    if beat in beats:
+        t = (first_event('sound reveal', beats[beat]) or beats[beat]) + 1.6
+        path = frame_at(t, segs)
+        if path:
+            thumbnail(path, (1280, 720), os.path.join(ROOT, '..', 'thumbnail-youtube.jpg'))
+            thumbnail(path, (1200, 800), os.path.join(ROOT, '..', 'thumbnail-devpost.jpg'), zoom=0.66)
 
 
 if __name__ == '__main__':
