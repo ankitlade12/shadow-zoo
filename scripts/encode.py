@@ -6,13 +6,14 @@ Inputs, from scripts/record.mjs, scripts/demo.sh and scripts/render-audio.mjs:
                                              (seconds since epoch); segments are joined end to end
   docs/video/chapters.txt                    one "<epoch seconds>\\t<title>" line per beat (optional)
   docs/video/audio.wav                       the rebuilt soundtrack (optional)
+  docs/video/music.wav                       the music, from scripts/score.py (optional)
   docs/video/voice.wav, narration.json       the voiceover and its lines' timing, from
                                              scripts/narrate.py (optional)
 
 Keeps the real timing between frames and shows each beat's title for a few seconds. A title that
 starts with "=" is shown as a centered card, with "|" between lines. Each voiceover line is
-captioned at the bottom while it plays, and the game's sound dips under the voice. A permanent
-label says this is emulator footage. Needs ffmpeg and Pillow. Usage: python3 scripts/encode.py
+captioned at the bottom while it plays, and the game's sound and the music dip under the voice. A
+permanent label says this is emulator footage. Needs ffmpeg and Pillow. Usage: python3 scripts/encode.py
 """
 import json
 import os
@@ -211,24 +212,36 @@ def main():
     graph.append(f'[{base}]format=yuv420p[v]')
 
     game = os.path.join(ROOT, 'audio.wav')
+    music = os.path.join(ROOT, 'music.wav')
     voice = os.path.join(ROOT, 'voice.wav')
-    has_game, has_voice = fresh(game), fresh(voice) and bool(lines)
-    audio_out = None
-    if has_game:
-        inputs.append(['-i', game])
-        gi = len(inputs) - 1
-        audio_out = f'{gi}:a'
+    has_game, has_music, has_voice = fresh(game), fresh(music), fresh(voice) and bool(lines)
+    bed = None  # the game's sound and the music, as a filter label or an input stream
+    for path, present in ((game, has_game), (music, has_music)):
+        if present:
+            inputs.append(['-i', path])
+            stream = f'{len(inputs) - 1}:a'
+            if bed is None:
+                bed = stream
+            else:
+                graph.append(f'[{bed}][{stream}]amix=inputs=2:normalize=0:duration=longest[bed]')
+                bed = 'bed'
+    audio_out = None if bed is None else (f'[{bed}]' if bed == 'bed' else bed)
     if has_voice:
         inputs.append(['-i', voice])
         vi = len(inputs) - 1
-        if has_game:
-            # The game's sound dips under the voice, then comes back up.
+        if bed is not None:
+            # The game's sound and the music dip under the voice, then come back up.
             graph.append(f'[{vi}:a]asplit=2[vkey][vmix]')
-            graph.append(f'[{gi}:a][vkey]sidechaincompress=threshold=0.02:ratio=9:attack=20:release=450[duck]')
+            graph.append(f'[{bed}][vkey]sidechaincompress=threshold=0.02:ratio=9:attack=20:release=450[duck]')
             graph.append('[duck][vmix]amix=inputs=2:normalize=0:duration=first[aout]')
             audio_out = '[aout]'
         else:
             audio_out = f'{vi}:a'
+    if audio_out:
+        # Mastered to -15 LUFS: YouTube turns louder videos down, but never turns quieter ones up.
+        source = audio_out if audio_out.startswith('[') else f'[{audio_out}]'
+        graph.append(f'{source}loudnorm=I=-15:TP=-1.5:LRA=11,aresample=48000[master]')
+        audio_out = '[master]'
     args = ['ffmpeg', '-y', '-loglevel', 'error'] + [a for inp in inputs for a in inp]
     args += ['-filter_complex', ';'.join(graph), '-map', '[v]']
     if audio_out:
@@ -237,7 +250,7 @@ def main():
     subprocess.run(args, check=True)
     print(
         f'wrote {os.path.relpath(OUT)}: {end:.1f} s from {len(segs)} segments, {len(chapters)} chapters, '
-        f'{len(lines)} captions, game audio {"yes" if has_game else "no"}, voice {"yes" if has_voice else "no"}'
+        f'{len(lines)} captions, game audio {"yes" if has_game else "no"}, music {"yes" if has_music else "no"}, voice {"yes" if has_voice else "no"}'
     )
 
 

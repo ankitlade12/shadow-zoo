@@ -14,17 +14,17 @@
     {
       "at": "Make the shape it shows, and it comes alive",
       "after": 0.3,
-      "text": "A glowing outline appears. Shape your hand to match it, and the rabbit wriggles free!"
+      "text": "Match the glowing outline, and the rabbit wriggles free!"
     },
     {
       "at": "Feed it: a pinch releases a firefly",
       "after": 0.3,
-      "text": "Pinch to release a firefly, and watch it chase it down."
+      "text": "Feed it with a pinch. A firefly flutters out, and the chase is on!"
     },
     {
       "at": "Pet it: let your shadow rest on it",
       "after": 0.3,
-      "text": "Rest your shadow on it to pet it. Hearts grow, and friends learn tricks."
+      "text": "Rest your shadow on it, and hearts grow. Friends learn tricks."
     },
     {
       "at": "Every visitor is a new shadow to learn",
@@ -54,7 +54,7 @@
     {
       "at": "Come back tomorrow: your zoo remembers you",
       "after": 0.3,
-      "text": "Come back tomorrow. Your zoo remembers you, and your streak keeps the lantern warm."
+      "text": "Come back tomorrow, and your zoo remembers you."
     },
     {
       "at": "Daily visitors bring a twist",
@@ -69,7 +69,7 @@
     {
       "at": "Pet a friend with three hearts and it does a trick",
       "after": 0.3,
-      "text": "Pet a friend with three hearts, and it does a trick for you."
+      "text": "Three hearts, and a friend does a trick just for you."
     },
     {
       "at": "A hands-only menu: point and pinch",
@@ -79,7 +79,7 @@
     {
       "at": "=",
       "after": 0.5,
-      "text": "Shadow Zoo. Hand shadows that come alive, on your own wall. Play it free on Meta Quest."
+      "text": "Shadow Zoo. Shadow animals that come alive, on your own wall. Free to play on Meta Quest."
     }
   ]
 }
