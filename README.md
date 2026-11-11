@@ -116,7 +116,7 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 ## What's real and what's emulated
 
 - **Real:** the game, the hosted build, and everything in the video and screenshots is real gameplay of this code.
-- **Emulated:** it was built and tested in Meta's IWSDK WebXR emulator (IWER), with emulated hand tracking in a virtual living room. The video says so on screen. Its music is an original score synthesized by [scripts/score.py](scripts/score.py). Its game sound is rebuilt offline from the game's own sound engine at the moments the game played it.
+- **Emulated:** it was built and tested in Meta's IWSDK WebXR emulator (IWER), with emulated hand tracking in a virtual living room. The demo video's game sound is rebuilt offline from the game's own sound engine at the moments the game played it.
 - **Not yet verified:** a physical Quest. Real hand-tracking noise, passthrough contrast in real rooms and on-device frame rate still need a headset test.
 
 ## Limitations
