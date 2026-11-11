@@ -35,8 +35,11 @@ varying vec2 vP;
 varying vec3 vA;
 varying vec3 vB;
 varying vec4 vChan;
+varying float vSoft;
 void main() {
-  float r = max(aA.z, aB.z) + uFeather;
+  // aChan.w: this capsule's own soft edge (meters), on top of the base feather.
+  vSoft = uFeather + aChan.w;
+  float r = max(aA.z, aB.z) + vSoft;
   vec2 lo = min(aA.xy, aB.xy) - vec2(r);
   vec2 hi = max(aA.xy, aB.xy) + vec2(r);
   vec2 p = mix(lo, hi, position.xy + 0.5);
@@ -48,19 +51,19 @@ void main() {
 }`;
 
 const MASK_FRAGMENT = /* glsl */ `
-uniform float uFeather;
 varying vec2 vP;
 varying vec3 vA;
 varying vec3 vB;
 varying vec4 vChan;
+varying float vSoft;
 void main() {
   vec2 e = vB.xy - vA.xy;
   vec2 q = vP - vA.xy;
   float h = clamp(dot(q, e) / max(dot(e, e), 1e-10), 0.0, 1.0);
   float d = length(q - e * h) - mix(vA.z, vB.z, h);
-  float c = 1.0 - smoothstep(-uFeather, uFeather, d);
+  float c = 1.0 - smoothstep(-vSoft, vSoft, d);
   if (c <= 0.0) discard;
-  gl_FragColor = vChan * c;
+  gl_FragColor = vec4(vChan.rgb * c, 0.0);
 }`;
 
 const COMPOSITE_VERTEX = /* glsl */ `
@@ -79,19 +82,26 @@ uniform vec3 uWarm;
 uniform float uLight;
 uniform float uShadow;
 uniform float uFade;
+uniform float uFlicker;
+uniform vec2 uSway;
 varying vec2 vS;
 void main() {
   vec4 m = texture2D(uMask, vS / (2.0 * uHalf) + 0.5);
+  // Shadows sway a few millimeters with the flame; outlines and glints stay put.
+  float sh = texture2D(uMask, (vS - uSway) / (2.0 * uHalf) + 0.5).r;
   float e = length(vS / uPool);
-  float pool = 1.0 - smoothstep(0.8, 1.0, e);
-  float lit = pool * (0.8 + 0.2 * (1.0 - e * e));
-  float shadow = m.r * pool;
-  float target = m.b * pool * (1.0 - m.r);
+  float pool = 1.0 - smoothstep(0.78, 1.0, e);
+  // Brightest at the center, falling off toward a deeper amber edge, breathing with the flame.
+  float lit = pool * (0.72 + 0.28 * (1.0 - e * e) + 0.12 * exp(-e * e * 7.0)) * uFlicker;
+  vec3 warm = mix(uWarm, uWarm * vec3(1.0, 0.8, 0.58), smoothstep(0.25, 1.0, e));
+  float shadow = sh * pool;
+  float target = m.b * pool * (1.0 - sh);
   float glow = m.g;
-  vec3 color = uWarm * uLight * lit * (1.0 - m.r)
+  vec3 color = warm * uLight * lit * (1.0 - sh)
+    + vec3(0.016, 0.022, 0.04) * shadow * uShadow
     + vec3(1.0, 0.78, 0.42) * target * 0.55
     + vec3(1.0, 0.9, 0.65) * glow;
-  float alpha = uLight * 0.55 * lit * (1.0 - m.r) + shadow * uShadow + target * 0.3 + glow * 0.8;
+  float alpha = uLight * 0.55 * lit * (1.0 - sh) + shadow * uShadow + target * 0.3 + glow * 0.8;
   gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0)) * uFade;
 }`;
 
@@ -151,6 +161,8 @@ export class ShadowCanvas {
         uLight: { value: 0.24 },
         uShadow: { value: 0.78 },
         uFade: { value: 0 },
+        uFlicker: { value: 1 },
+        uSway: { value: new Vector2(0, 0) },
       },
       transparent: true,
       depthWrite: false,
@@ -197,11 +209,18 @@ export class ShadowCanvas {
     this.compositeMaterial.uniforms.uLight.value = value;
   }
 
+  /** The flame's flicker: light-pool brightness (around 1) and shadow sway on the wall (meters). */
+  setFlicker(brightness: number, swayX: number, swayY: number): void {
+    this.compositeMaterial.uniforms.uFlicker.value = brightness;
+    (this.compositeMaterial.uniforms.uSway.value as Vector2).set(swayX, swayY);
+  }
+
   begin(): void {
     this.count = 0;
   }
 
-  addCapsule(ax: number, ay: number, ar: number, bx: number, by: number, br: number, channel: number, strength = 1): void {
+  /** Adds one capsule. `soft` widens its edge (meters): shadows blur with distance from the wall. */
+  addCapsule(ax: number, ay: number, ar: number, bx: number, by: number, br: number, channel: number, strength = 1, soft = 0): void {
     if (this.count >= MAX_INSTANCES) return;
     const i = this.count++;
     const a = this.aA.array as Float32Array;
@@ -216,13 +235,13 @@ export class ShadowCanvas {
     c[i * 4] = channel === CH_SHADOW ? strength : 0;
     c[i * 4 + 1] = channel === CH_GLOW ? strength : 0;
     c[i * 4 + 2] = channel === CH_TARGET ? strength : 0;
-    c[i * 4 + 3] = 0;
+    c[i * 4 + 3] = soft;
   }
 
-  addCapsules(caps: Float32Array, start: number, count: number, channel: number, strength = 1): void {
+  addCapsules(caps: Float32Array, start: number, count: number, channel: number, strength = 1, soft = 0): void {
     for (let i = 0; i < count; i++) {
       const o = (start + i) * CAPSULE_STRIDE;
-      this.addCapsule(caps[o], caps[o + 1], caps[o + 2], caps[o + 3], caps[o + 4], caps[o + 5], channel, strength);
+      this.addCapsule(caps[o], caps[o + 1], caps[o + 2], caps[o + 3], caps[o + 4], caps[o + 5], channel, strength, soft);
     }
   }
 

@@ -19,6 +19,8 @@ export interface HandShadow {
   palmY: number;
   /** Palm shadow speed on the stage (m/s). */
   speed: number;
+  /** How much the lantern magnifies the palm's shadow (1 on the wall); its edge softens with it. */
+  magnification: number;
   pinch: 'start' | 'end' | null;
   joints: JointSet | null;
   readonly detector: PinchDetector;
@@ -35,6 +37,7 @@ export const createHandShadow = (side: Handedness): HandShadow => ({
   palmX: 0,
   palmY: 0,
   speed: 0,
+  magnification: 1,
   pinch: null,
   joints: null,
   detector: new PinchDetector(),
@@ -65,6 +68,7 @@ export function updateHandShadow(hand: HandShadow, joints: JointSet | null, proj
   if (projector.project(p[m], p[m + 1], p[m + 2])) {
     hand.palmX = projector.x;
     hand.palmY = projector.y;
+    hand.magnification = projector.t;
   }
   hand.speed = wasTracked && dt > 0 ? Math.hypot(hand.palmX - prevX, hand.palmY - prevY) / dt : 0;
   hand.pinch = hand.detector.update(jointDistance(joints, J.thumbTip, J.indexTip), true);

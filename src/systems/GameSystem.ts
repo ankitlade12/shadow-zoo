@@ -3,6 +3,7 @@ import { blendCapsules, placeCapsules, placePoint, rotateCapsules, rotatePoint, 
 import type { Creature, Pool } from '../core/creature.js';
 import { BONES } from '../core/joints.js';
 import { buildCreatureShapes } from '../core/library.js';
+import { penumbra } from '../core/lantern.js';
 import { HEART } from '../core/particles.js';
 import { CAPSULE_STRIDE, ShadowProjector } from '../core/projector.js';
 import { mulberry32 } from '../core/rng.js';
@@ -100,7 +101,7 @@ export class GameSystem extends createSystem({}) {
   }
 
   private drawHands(canvas: ShadowCanvas, worn: Worn | null): void {
-    for (const hand of this.hands) if (hand.tracked) canvas.addCapsules(hand.caps, 0, hand.drawCount, CH_SHADOW, 1);
+    for (const hand of this.hands) if (hand.tracked) canvas.addCapsules(hand.caps, 0, hand.drawCount, CH_SHADOW, 1, penumbra(hand.magnification));
     if (worn) canvas.addDot(worn.eyeX, worn.eyeY, 0.004 * this.magnification, CH_GLOW, 1);
   }
 
@@ -141,11 +142,12 @@ export class GameSystem extends createSystem({}) {
     blendCapsules(shape.caps, shape.actCaps, c.act, shape.count, this.blendBuf);
     placeCapsules(this.blendBuf, shape.count, cx, cy, c.x, y, scale, c.facing, this.drawBuf);
     if (spin !== 0) rotateCapsules(this.drawBuf, shape.count, spin, c.x, y);
-    canvas.addCapsules(this.drawBuf, 0, shape.count, CH_SHADOW, 1);
+    // Creatures are shadows cast from the comfortable hand distance, so they share that softness.
+    canvas.addCapsules(this.drawBuf, 0, shape.count, CH_SHADOW, 1, penumbra(this.magnification));
     if (c.motion === 'dangle') {
       const top = stage.poolV * Math.sqrt(Math.max(0, 1 - (c.x / stage.poolU) ** 2));
       const thread = 0.0007 * this.magnification;
-      canvas.addCapsule(c.x, y + c.size * 0.35, thread, c.x, top, thread, CH_SHADOW, 0.85);
+      canvas.addCapsule(c.x, y + c.size * 0.35, thread, c.x, top, thread, CH_SHADOW, 0.85, penumbra(this.magnification) * 0.25);
     }
     if (c.eyeOpen > 0) {
       placePoint(shape.eye[0], shape.eye[1], cx, cy, c.x, y, scale, c.facing, this.point);
