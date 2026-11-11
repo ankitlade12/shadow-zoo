@@ -183,6 +183,15 @@ export class Creature {
     this.fireflyId = -1;
   }
 
+  /** The zoo is complete: a happy dance with a trick, whatever its hearts. */
+  celebrate(): void {
+    if (this.mode === 'appear') return;
+    this.mode = 'happy';
+    this.timer = 2;
+    this.fireflyId = -1;
+    this.trickTime = TRICK_TIME;
+  }
+
   /** A hand shadow is resting on it: it stops wandering and keeps resting while the touch lasts. */
   stay(): void {
     if (this.mode === 'wander') this.settle();

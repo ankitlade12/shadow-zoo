@@ -2,7 +2,7 @@ import { createSystem } from '@iwsdk/core';
 import { blendCapsules, placeCapsules, placePoint, rotateCapsules, rotatePoint, type Point } from '../core/animate.js';
 import type { Creature, Pool } from '../core/creature.js';
 import { BONES } from '../core/joints.js';
-import { buildCreatureShapes, canonicalPair, type CreatureDef } from '../core/library.js';
+import { buildCreatureShapes, canonicalPair, CREATURES, type CreatureDef } from '../core/library.js';
 import { penumbra } from '../core/lantern.js';
 import { HEART } from '../core/particles.js';
 import { CAPSULE_STRIDE, ShadowProjector } from '../core/projector.js';
@@ -48,6 +48,8 @@ export class GameSystem extends createSystem({}) {
   private time = 0;
   private magnification = 3;
   private lastVisitor: string | null = null;
+  /** Whether the lantern is golden now (the zoo is complete). */
+  private golden = false;
 
   init(): void {
     this.world.createTransformEntity(this.caption.mesh);
@@ -89,7 +91,9 @@ export class GameSystem extends createSystem({}) {
     this.showGhost(view.ghost ? this.shapes.get(view.ghost)!.def : null, stage);
     this.ghost.update(delta);
     this.ghostPair.update(delta);
+    if (this.session.complete !== this.golden) this.light(canvas);
     canvas.begin();
+    this.drawRow(canvas);
     this.drawHands(canvas, view.worn);
     this.drawVisitor(canvas);
     this.drawZoo(canvas, stage);
@@ -121,7 +125,35 @@ export class GameSystem extends createSystem({}) {
     this.pool = { u: stage.poolU, v: stage.poolV };
     this.session.onStage(this.pool, this.magnification);
     this.caption.place(stage);
-    canvas.setLight(0.24 + 0.015 * Math.min(8, this.session.saves.data.streak));
+    this.light(canvas);
+  }
+
+  /** The lantern warms with the streak and burns golden once every creature is found. */
+  private light(canvas: ShadowCanvas): void {
+    this.golden = this.session.complete;
+    canvas.setLight(0.24 + 0.015 * Math.min(8, this.session.saves.data.streak) + (this.golden ? 0.04 : 0));
+    canvas.setGolden(this.golden);
+  }
+
+  /**
+   * The zoo row: every creature as a small silhouette along the bottom of the light, below where the
+   * creatures walk, found ones as shadows and the rest as faint glowing outlines, so the goal is
+   * always in view.
+   */
+  private drawRow(canvas: ShadowCanvas): void {
+    const unlocked = this.session.saves.data.unlocked;
+    if (unlocked.length === 0) return;
+    const n = CREATURES.length;
+    const span = 0.84 * this.pool.u;
+    const icon = Math.min(0.085 * this.pool.u, (0.62 * span) / (n - 1));
+    const y = -0.74 * this.pool.v;
+    for (let i = 0; i < n; i++) {
+      const shape = this.shapes.get(CREATURES[i].id)!;
+      const { cx, cy, size } = shape.target.frame;
+      placeCapsules(shape.caps, shape.count, cx, cy, (i / (n - 1) - 0.5) * span, y, icon / size, 1, this.drawBuf);
+      const found = unlocked.includes(shape.def.id);
+      canvas.addCapsules(this.drawBuf, 0, shape.count, found ? CH_SHADOW : CH_TARGET, found ? 0.8 : 0.22, found ? 0.002 : 0);
+    }
   }
 
   private drawHands(canvas: ShadowCanvas, worn: Worn | null): void {

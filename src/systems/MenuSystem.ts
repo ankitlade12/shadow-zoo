@@ -1,5 +1,6 @@
 import { Box3, createSystem, Hovered, RayInteractable, Vector3, type Entity, type UIKitMLAsset } from '@iwsdk/core';
 import type { Stage } from '../core/stage.js';
+import { zooProgress } from '../game/rewards.js';
 import { ConfirmGuard, cycleSetting, settingLabel, type SettingKey } from '../game/Settings.js';
 import { store } from '../runtime/store.js';
 
@@ -148,6 +149,7 @@ export class MenuSystem extends createSystem({}) {
     const session = store.session;
     if (!session) return;
     for (const key of KEYS) this.label(`${key}-label`, settingLabel(session.settings, key));
+    this.label('progress', zooProgress(session.saves.data));
   }
 
   /** Sets a button label. Horizon kit ButtonLabel wraps a Text child, which is what holds the string. */

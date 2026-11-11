@@ -37,12 +37,15 @@ export interface CaptionInput {
   readonly handsMissing: number;
   readonly welcome: number;
   readonly streak: number;
+  /** A moment's news, such as who just joined the zoo; it outranks every other line while it lasts. */
+  readonly announce?: string | null;
 }
 
 const stuck = (s: CaptionInput): boolean => s.visitorElapsed > HINT_AFTER && s.visitorProgress < HINT_BELOW;
 
 /** The one short line shown on the wall right now, or null. */
 export function captionFor(s: CaptionInput): string | null {
+  if (s.announce) return s.announce;
   if (s.handsMissing > 3) return 'Show your hands to the lantern';
   if (s.welcome > 0) return s.streak > 1 ? `Welcome back! ${s.streak} nights in a row` : 'Welcome back!';
   if (s.visitor) {

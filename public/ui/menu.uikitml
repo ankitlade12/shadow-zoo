@@ -23,6 +23,16 @@
     color: #ffe9c7;
   }
 
+  .progress {
+    color: #8a5a12;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .progress:dark {
+    color: #ffc27a;
+  }
+
   .sub {
     color: #3a3b40;
     font-size: 18px;
@@ -47,6 +57,7 @@
 <Panel class="menu">
   <div class="head">
     <div class="title">Shadow Zoo</div>
+    <div id="progress" class="progress">0 of 7 creatures found</div>
     <div class="sub">Pinch a button to change it</div>
   </div>
   <div class="rows">

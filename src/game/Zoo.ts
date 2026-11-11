@@ -54,6 +54,16 @@ export class Zoo {
     return creature;
   }
 
+  /** The whole zoo is found: everyone celebrates with a trick under a shower of sparks. */
+  finale(pool: Pool): void {
+    for (const c of this.creatures) c.celebrate();
+    for (let i = 0; i < 9; i++) {
+      const x = (i / 8 - 0.5) * 1.4 * pool.u;
+      const y = (0.2 + 0.4 * this.rng()) * pool.v;
+      this.particles.emit(SPARK, x, y, 10, 0.25 * pool.v, this.rng);
+    }
+  }
+
   /** Today's visitor matched: the zoo's creature of that species cheers. */
   cheer(species: CreatureId, x: number, y: number, events: GameEvent[]): void {
     for (const c of this.creatures) {

@@ -57,6 +57,8 @@ describe('Session', () => {
     expect(view.ghost).toBe('rabbit');
     view = run(session, 2.5, [hand('rabbit')]);
     expect(session.zoo.unlocked.has('rabbit')).toBe(true);
+    expect(view.caption).toBe('Rabbit joins your zoo! ★★★');
+    view = run(session, 3, [hand('rabbit')]);
     expect(view.caption).toBe('Pinch to give it a firefly');
     expect(view.ghost).toBeNull();
     const saved = JSON.parse(storage.getItem(SAVE_KEY)!) as SaveData;
@@ -80,6 +82,22 @@ describe('Session', () => {
     expect(run(session, 1, [hand(null)]).caption).toBe('Welcome back! 3 nights in a row');
     run(session, 5, [hand(null)]);
     expect(session.visitors.current).not.toBeNull();
+  });
+
+  it('celebrates the last creature found: the zoo is complete', () => {
+    const save = freshSave();
+    save.unlocked = ['rabbit', 'dog', 'crocodile', 'bird', 'peacock', 'spider'];
+    save.streak = 1;
+    save.lastDay = '2026-11-10';
+    const session = new Session(shapes, sil, withSave(save), at('2026-11-10'), mulberry32(4));
+    session.onStage(pool, 1);
+    expect(session.complete).toBe(false);
+    run(session, 47, [hand(null)]);
+    expect(session.visitors.current?.def.id).toBe('turtle');
+    const view = run(session, 1.5, [hand('turtle')]);
+    expect(view.caption).toBe('Your zoo is complete! ★★★');
+    expect(session.complete).toBe(true);
+    expect(session.zoo.creatures.every((c) => c.mode === 'happy' || c.mode === 'appear')).toBe(true);
   });
 
   it('restores a returning zoo already at its fitted size, spread across the ground', () => {

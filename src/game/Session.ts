@@ -10,6 +10,7 @@ import type { HandShadow } from './hands.js';
 import { captionFor, Onboarding, showGhost, type CaptionInput, type Step } from './Onboarding.js';
 import { Progression, type VisitorPlan } from './Progression.js';
 import { Puppeteer, type Worn } from './Puppeteer.js';
+import { revealMessage, zooComplete } from './rewards.js';
 import { Visitors } from './Visitors.js';
 import { Zoo } from './Zoo.js';
 
@@ -46,6 +47,9 @@ export class Session {
   private magnification = 3;
   private handsMissing = 0;
   private welcome = 0;
+  /** The news of the moment on the wall (who joined, with its stars) and how long it stays. */
+  private announce: string | null = null;
+  private announceLeft = 0;
   private stepTime = 0;
   private lastStep: Step;
 
@@ -104,7 +108,7 @@ export class Session {
     this.updateTimers(dt, active);
     this.schedule();
     const revealed = this.visitors.update(dt, active);
-    if (revealed && this.plan) this.onReveal(revealed, events);
+    if (revealed && this.plan) this.onReveal(revealed, events, pool);
     const worn = this.puppeteer.update(dt, active, this.zoo.unlocked, this.visitors.current?.def.id ?? null, projector);
     const before = events.length;
     this.zoo.update(dt, pool, active, worn, events);
@@ -118,6 +122,8 @@ export class Session {
     input.handsMissing = this.handsMissing;
     input.welcome = this.welcome;
     input.streak = this.saves.data.streak;
+    this.announceLeft = Math.max(0, this.announceLeft - dt);
+    input.announce = this.announceLeft > 0 ? this.announce : null;
     this.view.caption = captionFor(input);
     this.view.ghost = showGhost(input) ? input.visitor : null;
     this.view.worn = worn;
@@ -159,13 +165,24 @@ export class Session {
     } else this.visitors.enqueue(plan.species);
   }
 
-  private onReveal(revealed: Revealed, events: GameEvent[]): void {
+  /** Every creature has been found: the lantern burns golden from then on. */
+  get complete(): boolean {
+    return zooComplete(this.saves.data);
+  }
+
+  private onReveal(revealed: Revealed, events: GameEvent[], pool: Pool): void {
     const plan = this.plan!;
     this.plan = null;
+    const wasComplete = zooComplete(this.saves.data);
     const stars = this.progression.onRevealed(plan, this.visitors.lastElapsed);
     if (plan.kind === 'new') this.zoo.add(revealed, events);
     else this.zoo.cheer(plan.species, revealed.x, revealed.y, events);
     this.zoo.celebrate(revealed.x, revealed.y, stars, revealed.size);
+    // The last creature found completes the zoo: a finale, and the news stays up a little longer.
+    const finished = plan.kind === 'new' && !wasComplete && zooComplete(this.saves.data);
+    if (finished) this.zoo.finale(pool);
+    this.announce = revealMessage(this.shapes.get(plan.species)!.def.name, plan.kind, stars, finished);
+    this.announceLeft = finished ? 5 : 3;
     this.onboarding.onReveal();
     this.saves.save();
   }
