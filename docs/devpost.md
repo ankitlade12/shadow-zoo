@@ -7,7 +7,7 @@
 - **Track:** Gaming
 - **Division:** New Experience. The project was conceived and built after September 24, 2026.
 - **Platform:** Meta Quest 3 and 3S (WebXR, built with the Immersive Web SDK). It's fully usable with hands, controllers aren't needed, and it's designed for seated play.
-- **Build link:** https://ankitlade12.github.io/shadow-zoo/ (open it in Meta Quest Browser)
+- **Build link:** https://ankitlade12.github.io/shadow-zoo/ (open it in Meta Quest Browser; on a computer it opens a desktop preview in Meta's WebXR emulator, steered with the mouse and keyboard)
 - **Code:** https://github.com/ankitlade12/shadow-zoo (MIT)
 - **Video:** recorded, `docs/video/shadow-zoo-demo.mp4` (1:36, IWSDK emulator footage, labeled on screen). It still needs uploading to YouTube or Vimeo for the submission link.
 
@@ -40,7 +40,8 @@ Shadow Zoo is built for coming back. Your zoo is saved on your device and greets
 - **Matching:** shapes are normalized for position and size, then compared with an overlap score plus a 64-direction radial signature. The signature finds the rotation and makes sure ears, jaws and legs are in the right places.
 - **Creatures:** creatures are hand shadows too. Each blends between a base pose and an action pose, with its own gait.
 - **Audio:** all sounds are synthesized live with the Web Audio API and placed on the wall in 3D.
-- **Quality:** 130+ automated tests cover the math, matching, progression, saving and the full session flow. An emulator drill plays a fresh game with built-in hand poses and times every match.
+- **Desktop preview:** without a headset, the same link runs Meta's WebXR emulator with a virtual living room. An emulated hand, steered with the mouse and keyboard, takes the game's own creature poses. Quest Browser never downloads the emulator.
+- **Quality:** 150+ automated tests cover the math, matching, progression, saving and the full session flow. An emulator drill plays a fresh game with built-in hand poses and times every match.
 
 ## Challenges
 
@@ -63,6 +64,9 @@ Shadow Zoo is built for coming back. Your zoo is saved on your device and greets
 ## Honest notes for judges
 
 - Tested in the IWSDK WebXR emulator. On-device frame rate and real-room behavior haven't been verified.
+- **On a computer, the link opens a desktop preview, and it says so on screen.**
+  - It runs Meta's WebXR emulator with a virtual living room and an emulated hand that you steer with the mouse and keyboard; keys 1 to 6 make the shapes.
+  - It's there for a quick look without a headset. The game is designed for real hands on Quest.
 - **The video is emulator footage, and it says so on screen.**
   - The game is played by a script using built-in emulated hand poses.
   - The emulator's screen capture has no audio, so the soundtrack was rebuilt offline from the game's own synthesized sound recipes. Each sound is placed at the moment and wall position where the game played it.

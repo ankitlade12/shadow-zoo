@@ -107,11 +107,94 @@
           transform 0.15s ease,
           box-shadow 0.3s ease;
       }
-      #start:hover,
+      #start:hover:enabled,
       #start:focus-visible {
         transform: translateY(-1px);
         box-shadow: 0 0 36px 4px rgba(255, 194, 122, 0.45);
         outline: none;
+      }
+      #start:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      body[data-xr='preview'] [data-for='headset'],
+      body:not([data-xr='preview']) [data-for='desktop'] {
+        display: none;
+      }
+      #preview-bar {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        z-index: 1000;
+        width: max-content;
+        max-width: calc(100% - 32px);
+        box-sizing: border-box;
+        padding: 10px 14px 12px;
+        border-radius: 18px;
+        background: rgba(18, 12, 8, 0.82);
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
+        text-align: center;
+        font-size: 14px;
+        user-select: none;
+      }
+      #preview-bar[hidden] {
+        display: none;
+      }
+      .preview-title {
+        margin: 0 0 8px;
+        color: var(--glow);
+        font-size: 13px;
+        letter-spacing: 0.3px;
+      }
+      .preview-keys {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+      }
+      .preview-keys button {
+        font: inherit;
+        color: var(--ink);
+        background: rgba(255, 194, 122, 0.1);
+        border: 1px solid rgba(255, 194, 122, 0.25);
+        border-radius: 999px;
+        padding: 6px 12px 6px 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        cursor: pointer;
+      }
+      .preview-keys button:hover {
+        background: rgba(255, 194, 122, 0.2);
+      }
+      .preview-keys button[aria-pressed='true'] {
+        background: var(--glow);
+        color: #26170c;
+        border-color: var(--glow);
+      }
+      kbd {
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 22px;
+        padding: 2px 6px;
+        box-sizing: border-box;
+        border-radius: 999px;
+        background: rgba(255, 233, 199, 0.16);
+      }
+      .preview-keys button[aria-pressed='true'] kbd {
+        background: rgba(38, 23, 12, 0.18);
+      }
+      .preview-help {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .preview-help kbd {
+        font-size: 11px;
+        padding: 1px 5px;
       }
       .note {
         margin-top: 18px;
@@ -136,16 +219,37 @@
       <div class="card">
         <h1>Shadow Zoo</h1>
         <p class="tagline">Make shadow puppets with your hands on your real wall, and watch them come alive.</p>
-        <ol>
+        <ol data-for="headset">
           <li><span class="n">1</span><span>Sit facing a wall in a lit room and put your controllers down.</span></li>
           <li><span class="n">2</span><span>Shape your hand until its shadow fits the glowing outline.</span></li>
           <li><span class="n">3</span><span>Pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
         </ol>
-        <button id="start" type="button">Light the lantern</button>
+        <ol data-for="desktop">
+          <li><span class="n">1</span><span>Move the mouse: an emulated hand casts its shadow on the wall of a virtual room.</span></li>
+          <li><span class="n">2</span><span>Press 1 to 6 to shape the hand until its shadow fits the glowing outline.</span></li>
+          <li><span class="n">3</span><span>Click to pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
+        </ol>
+        <button id="start" type="button" disabled>Light the lantern</button>
         <p class="note" id="support">Made for Meta Quest 3 and 3S. Hands only, seated.</p>
         <p class="fine">Your zoo is saved only on this device. No accounts, no tracking.</p>
       </div>
     </main>
+    <div id="preview-bar" hidden>
+      <p class="preview-title">Desktop preview · emulated Meta Quest 3</p>
+      <div class="preview-keys" role="toolbar" aria-label="Hand shapes">
+        <button type="button" data-shape="rabbit"><kbd>1</kbd>Rabbit</button>
+        <button type="button" data-shape="dog"><kbd>2</kbd>Dog</button>
+        <button type="button" data-shape="crocodile"><kbd>3</kbd>Crocodile</button>
+        <button type="button" data-shape="peacock"><kbd>4</kbd>Peacock</button>
+        <button type="button" data-shape="spider"><kbd>5</kbd>Spider</button>
+        <button type="button" data-shape="turtle"><kbd>6</kbd>Turtle</button>
+        <button type="button" data-shape=""><kbd>0</kbd>Open hand</button>
+        <button type="button" data-action="leave"><kbd>Esc</kbd>Leave</button>
+      </div>
+      <p class="preview-help">
+        Move the mouse to move your shadow · click to pinch · hold <kbd>Space</kbd> to snap the jaw · scroll up for a bigger shadow
+      </p>
+    </div>
     <script type="module" src="/src/index.ts"></script>
   </body>
 </html>

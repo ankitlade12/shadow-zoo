@@ -1,5 +1,11 @@
+import { fileURLToPath } from 'node:url';
 import { iwsdkDev } from '@iwsdk/vite-plugin-dev';
 import { defineConfig } from 'vite';
+
+// The desktop preview's WebXR emulator: IWSDK's prebuilt runtime (IWER and its virtual rooms), the
+// one its dev server injects. The plugin doesn't export it, so it is aliased by path. The page
+// imports it on demand, only on computers that can't start mixed reality, so headsets never load it.
+const emulatorRuntime = fileURLToPath(new URL('./node_modules/@iwsdk/vite-plugin-dev/dist/injection/runtime.js', import.meta.url));
 
 export default defineConfig({
   plugins: [iwsdkDev()],
@@ -12,6 +18,7 @@ export default defineConfig({
   },
   esbuild: { target: 'esnext' },
   resolve: {
+    alias: { 'iwsdk-emulator-runtime': emulatorRuntime },
     dedupe: ['three', '@pmndrs/uikit', '@pmndrs/uikit-horizon', '@pmndrs/uikit-lucide'],
   },
   optimizeDeps: {

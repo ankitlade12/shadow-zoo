@@ -2,7 +2,7 @@
 
 Make shadow puppets with your hands on your real wall, and watch them come alive.
 
-**Play it:** open **https://ankitlade12.github.io/shadow-zoo/** in Meta Quest Browser on a Quest 3 or 3S.
+**Play it:** open **https://ankitlade12.github.io/shadow-zoo/** in Meta Quest Browser on a Quest 3 or 3S. On a computer, the same link opens a [desktop preview](#desktop-preview) in Meta's WebXR emulator.
 **Watch it:** [`docs/video/shadow-zoo-demo.mp4`](docs/video/shadow-zoo-demo.mp4) (1:36, IWSDK emulator footage).
 
 Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's Immersive Web SDK (WebXR). A warm virtual lantern shines from behind you, and your tracked hands cast soft shadows onto the wall you are facing. When your hand's shadow matches a creature's glowing outline, it wriggles free and joins a living zoo on your wall. You can feed it fireflies, pet it with your shadow, or "wear" it and puppeteer its voice. The zoo is still there the next time you come back.
@@ -29,6 +29,25 @@ Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's
   - a narrow view for Meta VR Glasses;
   - Re-light (moves the stage to the wall you face);
   - Reset zoo.
+
+## Desktop preview
+
+No headset? On a computer, the same link opens a desktop preview. It runs Meta's WebXR emulator (IWER, as the IWSDK dev server runs it) with a virtual living room and an emulated hand that you steer with the mouse and keyboard. It's meant for a quick look; the game itself is hands-only on Quest.
+
+| Control | What it does |
+| --- | --- |
+| Move the mouse | Moves your hand; its shadow lands under the cursor |
+| 1 to 6 | Makes the rabbit, dog, crocodile, peacock, spider or turtle shape |
+| 0 | Opens the hand, for petting |
+| Click | Pinches: releases a firefly, or presses a menu button |
+| Hold Space | Snaps the jaw (or ears, legs, head) of a creature you're wearing |
+| Scroll up or down | Moves the hand nearer to or farther from the light, for a bigger or smaller shadow |
+| Esc | Leaves |
+
+- The page checks `navigator.xr.isSessionSupported('immersive-ar')` and loads the emulator only in browsers that can't start mixed reality. Meta Quest Browser plays natively and never downloads it.
+- The emulated hand takes the game's own creature poses, so the same shadow matching runs as on a headset.
+- Checked in Chrome, Safari (WebKit) and Firefox.
+- Touch-only devices show a note instead, since they have no mouse to steer the hand.
 
 ## Run it locally
 
@@ -84,7 +103,8 @@ src/core/     pure game math and logic (no WebXR; unit-tested)
   creature, fireflies, particles, interact, puppet, matcher, save, daily
 src/game/     the game: hand shadows, visitors, wearing, the zoo, progression, onboarding, session
 src/render/   shadow canvas (2D mask pass plus one composite quad), captions, ghost hand
-src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound
+src/preview/  desktop preview: browser check, emulator start, mouse and keyboard controls, hand placement
+src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound, preview
 ```
 
 - **Shadows.** Each tracked hand's 25 joints are projected from a virtual lantern onto the stage plane as tapered capsules. They're drawn into a small 2D mask once per frame, then composited over passthrough with a single wall-aligned quad.
@@ -100,6 +120,7 @@ src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound
 
 - Shadow Zoo stores your progress and settings only in this browser's `localStorage` on your device.
 - It has no accounts, analytics, network APIs or AI services.
+- The page loads its own code from GitHub Pages. IWSDK also fetches the standard WebXR hand model from the jsDelivr CDN when a hand appears.
 - Hand-joint data is used only in memory to draw shadows and is never stored or sent anywhere.
 
 ## Status and limits

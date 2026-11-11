@@ -43,6 +43,12 @@ export class AudioEngine {
   setListener(px: number, py: number, pz: number, fx: number, fy: number, fz: number): void {
     const listener = this.ctx?.listener;
     if (!listener) return;
+    // Firefox has no listener AudioParams, only the older setters.
+    if (!listener.positionX) {
+      listener.setPosition(px, py, pz);
+      listener.setOrientation(fx, fy, fz, 0, 1, 0);
+      return;
+    }
     listener.positionX.value = px;
     listener.positionY.value = py;
     listener.positionZ.value = pz;
@@ -123,9 +129,13 @@ export class AudioEngine {
     p.distanceModel = 'inverse';
     p.refDistance = 1;
     p.rolloffFactor = 0.6;
-    p.positionX.value = at[0];
-    p.positionY.value = at[1];
-    p.positionZ.value = at[2];
+    if (p.positionX) {
+      p.positionX.value = at[0];
+      p.positionY.value = at[1];
+      p.positionZ.value = at[2];
+    } else {
+      p.setPosition(at[0], at[1], at[2]);
+    }
     p.connect(this.master!);
     return p;
   }
