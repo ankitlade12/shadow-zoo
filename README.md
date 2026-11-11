@@ -9,7 +9,7 @@ Entry for the Meta VR Start Developer Competition 2026: Gaming track, New Experi
 | | |
 |---|---|
 | Play it | https://ankitlade12.github.io/shadow-zoo/ (Meta Quest Browser on Quest 3 or 3S) |
-| Demo video | https://youtu.be/UDuvUWqNC5c (2:08, narrated and captioned) |
+| Demo video | https://youtu.be/UDuvUWqNC5c |
 | Devpost | https://devpost.com/software/shadow-zoo |
 | No headset? | The same link opens a desktop preview: your real hands through a webcam, or the mouse |
 | Built with | Meta's Immersive Web SDK (WebXR), three.js, TypeScript, Web Audio |
