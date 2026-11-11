@@ -111,12 +111,12 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 
 - One art direction throughout: warm candlelight, soft shadows, cream type, and the same lantern glow from the landing page to the finale.
 - Sound is synthesized and placed in space: crickets from the wall, a voice for each creature, chirps for fireflies.
-- The demo video is real gameplay with a narrated walkthrough, captions and an original score.
+- The demo video is real gameplay with captions and an original score.
 
 ## What's real and what's emulated
 
 - **Real:** the game, the hosted build, and everything in the video and screenshots is real gameplay of this code.
-- **Emulated:** it was built and tested in Meta's IWSDK WebXR emulator (IWER), with emulated hand tracking in a virtual living room. The video says so on screen. Its voiceover is [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M), an open text-to-speech model under the Apache 2.0 license, in an Indian English voice. Its music is an original score synthesized by [scripts/score.py](scripts/score.py). Its game sound is rebuilt offline from the game's own sound engine at the moments the game played it.
+- **Emulated:** it was built and tested in Meta's IWSDK WebXR emulator (IWER), with emulated hand tracking in a virtual living room. The video says so on screen. Its music is an original score synthesized by [scripts/score.py](scripts/score.py). Its game sound is rebuilt offline from the game's own sound engine at the moments the game played it.
 - **Not yet verified:** a physical Quest. Real hand-tracking noise, passthrough contrast in real rooms and on-device frame rate still need a headset test.
 
 ## Limitations
@@ -151,9 +151,7 @@ npm run build        # static site in dist/; GitHub Actions deploys main to GitH
 ./node_modules/.bin/iwsdk dev up --ai-mode agent --headless --allow-browser-automation --screenshot-width 1280 --screenshot-height 720
 bash scripts/demo.sh                                                  # plays and records the scripted demo
 ./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
-~/.venvs/shadow-zoo-tts/bin/python scripts/synth_voice.py            # the voiceover in Kokoro (setup in the script)
-python3 scripts/record_voice.py                                      # or record it yourself, line by line
-python3 scripts/narrate.py                                           # the voiceover track from those takes
+python3 scripts/narrate.py                                           # caption timing, from scripts/narration.json
 python3 scripts/score.py                                             # the original music, timed to the beats
 python3 scripts/encode.py                                            # the captioned video, in docs/video/
 python3 scripts/gallery.py                                           # docs/gallery/, plus thumbnails in docs/
