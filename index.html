@@ -121,6 +121,121 @@
       body:not([data-xr='preview']) [data-for='desktop'] {
         display: none;
       }
+      /* Desktop preview with a camera: real hands first, the mouse second. */
+      #start-camera:not([hidden]) + #start {
+        display: block;
+        margin: 14px auto 0;
+        min-width: 0;
+        min-height: 0;
+        padding: 8px 18px;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--glow);
+        background: transparent;
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      #start-camera:not([hidden]) + #start:hover:enabled {
+        box-shadow: none;
+      }
+      #start-camera {
+        font: inherit;
+        font-size: 22px;
+        font-weight: 700;
+        color: #26170c;
+        background: var(--glow);
+        border: 0;
+        border-radius: 999px;
+        padding: 18px 40px;
+        min-width: 260px;
+        min-height: 64px;
+        cursor: pointer;
+      }
+      #start-camera:hover:enabled,
+      #start-camera:focus-visible {
+        transform: translateY(-1px);
+        box-shadow: 0 0 36px 4px rgba(255, 194, 122, 0.45);
+        outline: none;
+      }
+      #start-camera:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #start-camera small {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.75;
+      }
+      #preview-bar[data-input='mouse'] [data-for-input='camera'],
+      #preview-bar[data-input='camera'] [data-for-input='mouse'] {
+        display: none;
+      }
+      .preview-head {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+        margin-bottom: 8px;
+      }
+      .preview-head .preview-title {
+        margin: 0;
+      }
+      .pill {
+        font: inherit;
+        font-size: 13px;
+        color: var(--ink);
+        background: rgba(255, 194, 122, 0.1);
+        border: 1px solid rgba(255, 194, 122, 0.25);
+        border-radius: 999px;
+        padding: 4px 10px 4px 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+      }
+      .pill[data-action='camera'] {
+        padding-left: 10px;
+      }
+      .pill:hover {
+        background: rgba(255, 194, 122, 0.2);
+      }
+      #camera-view {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 1000;
+        width: min(240px, 34vw);
+        border-radius: 14px;
+        overflow: hidden;
+        background: #120c08;
+        box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35);
+      }
+      #camera-view[hidden] {
+        display: none;
+      }
+      #camera-view video,
+      #camera-view canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+        transform: scaleX(-1);
+      }
+      #camera-view canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+      #camera-note {
+        margin: 0;
+        padding: 6px 10px 8px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--muted);
+        background: rgba(18, 12, 8, 0.92);
+      }
       #preview-bar {
         position: fixed;
         left: 50%;
@@ -225,18 +340,24 @@
           <li><span class="n">3</span><span>Pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
         </ol>
         <ol data-for="desktop">
-          <li><span class="n">1</span><span>Move the mouse: an emulated hand casts its shadow on the wall of a virtual room.</span></li>
-          <li><span class="n">2</span><span>Press 1 to 6 to shape the hand until its shadow fits the glowing outline.</span></li>
-          <li><span class="n">3</span><span>Click to pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
+          <li><span class="n">1</span><span>Hold a hand up to your camera: its shadow falls on the wall of a virtual room.</span></li>
+          <li><span class="n">2</span><span>Shape your hand until its shadow fits the glowing outline.</span></li>
+          <li><span class="n">3</span><span>Pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
         </ol>
+        <button id="start-camera" type="button" hidden disabled>Light the lantern</button>
         <button id="start" type="button" disabled>Light the lantern</button>
         <p class="note" id="support">Made for Meta Quest 3 and 3S. Hands only, seated.</p>
+        <p class="fine" data-for="desktop">Your camera picture stays on this device: only your hands' shape is used, and nothing is recorded or sent.</p>
         <p class="fine">Your zoo is saved only on this device. No accounts, no tracking.</p>
       </div>
     </main>
-    <div id="preview-bar" hidden>
-      <p class="preview-title">Desktop preview · emulated Meta Quest 3</p>
-      <div class="preview-keys" role="toolbar" aria-label="Hand shapes">
+    <div id="preview-bar" data-input="mouse" hidden>
+      <div class="preview-head">
+        <p class="preview-title">Desktop preview · emulated Meta Quest 3</p>
+        <button type="button" class="pill" data-action="camera">Use my camera</button>
+        <button type="button" class="pill" data-action="leave"><kbd>Esc</kbd>Leave</button>
+      </div>
+      <div class="preview-keys" data-for-input="mouse" role="toolbar" aria-label="Hand shapes">
         <button type="button" data-shape="rabbit"><kbd>1</kbd>Rabbit</button>
         <button type="button" data-shape="dog"><kbd>2</kbd>Dog</button>
         <button type="button" data-shape="crocodile"><kbd>3</kbd>Crocodile</button>
@@ -244,11 +365,19 @@
         <button type="button" data-shape="spider"><kbd>5</kbd>Spider</button>
         <button type="button" data-shape="turtle"><kbd>6</kbd>Turtle</button>
         <button type="button" data-shape=""><kbd>0</kbd>Open hand</button>
-        <button type="button" data-action="leave"><kbd>Esc</kbd>Leave</button>
       </div>
-      <p class="preview-help">
+      <p class="preview-help" data-for-input="mouse">
         Move the mouse to move your shadow · click to pinch · hold <kbd>Space</kbd> to snap the jaw · scroll up for a bigger shadow
       </p>
+      <p class="preview-help" data-for-input="camera">
+        Make a shadow shape with your hand in front of the camera · pinch for a firefly · move your hand back for a bigger
+        shadow · open the wall's Menu with the mouse
+      </p>
+    </div>
+    <div id="camera-view" hidden>
+      <video playsinline muted></video>
+      <canvas></canvas>
+      <p id="camera-note"></p>
     </div>
     <script type="module" src="/src/index.ts"></script>
   </body>

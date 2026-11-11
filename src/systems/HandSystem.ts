@@ -27,6 +27,14 @@ export class HandSystem extends createSystem({}) {
       if (store.stage) placeTestPose(this.test, store.stage, store.hands[this.test.side]);
       return;
     }
+    const source = store.handSource;
+    if (source) {
+      for (const side of SIDES) {
+        store.hands[side].tracked = false;
+        if (store.stage) source(side, store.stage, store.hands[side]);
+      }
+      return;
+    }
     const frame = this.xrFrame as (XRFrame & HandInputFrame) | undefined;
     const ref = this.xrManager.getReferenceSpace();
     const m = this.player.matrixWorld.elements;

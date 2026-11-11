@@ -24,6 +24,8 @@ export const store = {
   session: null as Session | null,
   /** Game events this frame; AudioSystem plays and clears them. */
   events: [] as GameEvent[],
+  /** Hands from somewhere other than WebXR (the desktop preview's camera); null reads the tracked hands. */
+  handSource: null as ((side: Handedness, stage: Stage, out: HandSample) => void) | null,
   hands: {
     left: { tracked: false, joints: createJointSet() },
     right: { tracked: false, joints: createJointSet() },

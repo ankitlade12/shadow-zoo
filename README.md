@@ -32,7 +32,14 @@ Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's
 
 ## Desktop preview
 
-No headset? On a computer, the same link opens a desktop preview. It runs Meta's WebXR emulator (IWER, as the IWSDK dev server runs it) with a virtual living room and an emulated hand that you steer with the mouse and keyboard. It's meant for a quick look; the game itself is hands-only on Quest.
+No headset? On a computer, the same link opens a desktop preview. It runs Meta's WebXR emulator (IWER, as the IWSDK dev server runs it) with a virtual living room. The game itself is hands-only on Quest, and the preview offers two ways in.
+
+**With your real hands (camera).** Press **Light the lantern, with my real hands** and hold a hand up to your camera. MediaPipe hand tracking runs in the page and follows both hands. Your real hand's shape casts the shadow, so you make the creatures the same way you would on a headset. A small mirrored camera view shows what's tracked.
+- Move across the picture to move the shadow; move your hand back toward you for a bigger shadow.
+- Pinch for a firefly. Open the wall's Menu with the mouse.
+- The camera picture never leaves your device. The tracking engine and model ship with the page; nothing is recorded or sent. The camera turns off when you leave.
+
+**With the mouse.** An emulated hand follows the cursor:
 
 | Control | What it does |
 | --- | --- |
@@ -45,7 +52,7 @@ No headset? On a computer, the same link opens a desktop preview. It runs Meta's
 | Esc | Leaves |
 
 - The page checks `navigator.xr.isSessionSupported('immersive-ar')` and loads the emulator only in browsers that can't start mixed reality. Meta Quest Browser plays natively and never downloads it.
-- The emulated hand takes the game's own creature poses, so the same shadow matching runs as on a headset.
+- The emulated hand takes the game's own creature poses, and camera hands are mapped into the room at the game's comfortable hand point, so the same shadow matching runs as on a headset.
 - Checked in Chrome, Safari (WebKit) and Firefox.
 - Touch-only devices show a note instead, since they have no mouse to steer the hand.
 
@@ -122,6 +129,7 @@ src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound, previe
 - It has no accounts, analytics, network APIs or AI services.
 - The page loads its own code from GitHub Pages. IWSDK also fetches the standard WebXR hand model from the jsDelivr CDN when a hand appears.
 - Hand-joint data is used only in memory to draw shadows and is never stored or sent anywhere.
+- In the desktop preview, real hands are optional. If you choose them, the camera picture is analyzed in the page by MediaPipe hand tracking, which ships with the site. Pictures are never stored or sent, and the camera turns off when you leave.
 
 ## Status and limits
 

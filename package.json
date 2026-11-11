@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@iwsdk/core": "1.1.0-rc.2",
+    "@mediapipe/tasks-vision": "1.2.2",
     "@pmndrs/uikit": "^1.0.74",
     "@pmndrs/uikit-horizon": "^1.0.74",
     "@pmndrs/uikit-lucide": "^1.0.74",

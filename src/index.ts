@@ -37,11 +37,12 @@ async function main(): Promise<void> {
     .registerSystem(GameSystem, { priority: 10 })
     .registerSystem(RenderSystem, { priority: 25 })
     .registerSystem(SoundSystem, { priority: 30 });
+  let controls;
   if (preview.device) {
     world.registerSystem(PreviewSystem, { priority: -1 });
-    mountPreviewControls(world);
+    controls = mountPreviewControls(world);
   }
-  mountLanding(world, mode);
+  mountLanding(world, mode, controls);
 }
 
 void main();

@@ -44,7 +44,8 @@ export class PreviewSystem extends createSystem({}) {
 
     const stage = store.stage;
     const input = preview.input;
-    const wall = this.renderer.xr.isPresenting && stage && input.cursor ? this.cursorOnWall(input.cursor, stage) : null;
+    // Real hands from the camera take over from the mouse.
+    const wall = this.renderer.xr.isPresenting && stage && input.cursor && !store.handSource ? this.cursorOnWall(input.cursor, stage) : null;
     if (!stage || !wall) {
       lower(hand);
       return;

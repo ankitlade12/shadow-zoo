@@ -1,6 +1,7 @@
 import { VisibilityState, type World } from '@iwsdk/core';
 import type { CreatureId } from '../core/library.js';
 import { store } from '../runtime/store.js';
+import type { CameraTracker } from './camera/tracker.js';
 import { nudgeReach, shapeForKey } from './controls.js';
 import { preview } from './state.js';
 
@@ -8,17 +9,37 @@ import { preview } from './state.js';
 const SCROLL_STEP = 120;
 const LINE_HEIGHT = 33;
 
+/** What the landing page needs from the preview controls. */
+export interface PreviewControls {
+  /** True when the browser can open a camera, so real hands are offered first. */
+  readonly cameraAvailable: boolean;
+  /** Turns on real hands from the camera; falls back to the mouse, with a note, if it can't. */
+  useCamera(): Promise<void>;
+}
+
 /**
- * Desktop preview controls: the mouse moves the emulated hand's shadow and pinches, keys 1 to 6 shape
- * the hand (0 opens it), Space holds the creature's action, the wheel moves the hand nearer the light
- * and Escape leaves. A bar along the bottom lists them while the preview runs.
+ * Desktop preview controls. With the camera, the player's real hands cast the shadows. With the
+ * mouse, an emulated hand's shadow follows the cursor: keys 1 to 6 shape it (0 opens it), a click
+ * pinches, Space holds the creature's action and the wheel moves the hand nearer the light. Escape
+ * leaves. A bar along the bottom lists the controls while the preview runs.
  */
-export function mountPreviewControls(world: World): void {
+export function mountPreviewControls(world: World): PreviewControls {
   const bar = document.getElementById('preview-bar');
+  const cameraView = document.getElementById('camera-view');
+  const cameraNote = document.getElementById('camera-note');
+  const video = cameraView?.querySelector('video') ?? null;
+  const overlay = cameraView?.querySelector('canvas') ?? null;
+  const toggle = bar?.querySelector<HTMLButtonElement>('button[data-action="camera"]') ?? null;
   const canvas = world.renderer.domElement;
   const input = preview.input;
   const playing = (): boolean => world.visibilityState.value !== VisibilityState.NonImmersive;
   const chips = bar ? Array.from(bar.querySelectorAll<HTMLButtonElement>('button[data-shape]')) : [];
+  const cameraAvailable = typeof navigator.mediaDevices?.getUserMedia === 'function' && !!video && !!overlay;
+
+  let tracker: CameraTracker | null = null;
+  let starting = false;
+  let noteTimer = 0;
+  let countTimer = 0;
 
   const showShape = (): void => {
     for (const chip of chips) chip.setAttribute('aria-pressed', String(chip.dataset.shape === (input.shape ?? '')));
@@ -32,12 +53,73 @@ export function mountPreviewControls(world: World): void {
     input.pinch = false;
     input.act = false;
   };
+  const note = (text: string): void => {
+    if (cameraNote) cameraNote.textContent = text;
+  };
+  const showInput = (): void => {
+    const camera = tracker !== null || starting;
+    if (bar) bar.dataset.input = camera ? 'camera' : 'mouse';
+    if (toggle) toggle.textContent = camera ? 'Use the mouse' : 'Use my camera';
+    if (toggle) toggle.hidden = !cameraAvailable;
+  };
+
+  const stopCamera = (): void => {
+    window.clearInterval(countTimer);
+    tracker?.stop();
+    tracker = null;
+    store.handSource = null;
+    if (cameraView) cameraView.hidden = true;
+    showInput();
+  };
+
+  const useCamera = async (): Promise<void> => {
+    if (!cameraAvailable || tracker || starting || !video || !overlay || !cameraView) return;
+    starting = true;
+    window.clearTimeout(noteTimer);
+    cameraView.hidden = false;
+    showInput();
+    try {
+      const { startCameraTracker } = await import('./camera/tracker.js');
+      const started = await startCameraTracker({ video, overlay }, note);
+      starting = false;
+      if (!playing()) {
+        started.stop();
+        stopCamera();
+        return;
+      }
+      tracker = started;
+      store.handSource = (side, stage, out) => started.sample(side, stage, out);
+      countTimer = window.setInterval(() => {
+        const n = started.count;
+        note(n === 0 ? 'Hold a hand up to the camera' : n === 1 ? 'Tracking your hand' : 'Tracking both hands');
+      }, 300);
+    } catch (error) {
+      starting = false;
+      console.warn('[ShadowZoo] Camera hands unavailable:', error);
+      const name = (error as { name?: string } | null)?.name;
+      note(
+        name === 'NotAllowedError'
+          ? 'Camera access was declined, so the mouse steers the hand.'
+          : name === 'NotFoundError' || name === 'OverconstrainedError'
+            ? 'No camera found, so the mouse steers the hand.'
+            : "The camera didn't start, so the mouse steers the hand.",
+      );
+      // The mouse takes over at once; the note stays up a moment before the camera view closes.
+      noteTimer = window.setTimeout(stopCamera, 4000);
+    }
+    showInput();
+  };
 
   for (const chip of chips) {
     // Keep focus on the page, so Space snaps the jaw instead of pressing the button again.
     chip.addEventListener('mousedown', (event) => event.preventDefault());
     chip.addEventListener('click', () => setShape((chip.dataset.shape || null) as CreatureId | null));
   }
+  toggle?.addEventListener('mousedown', (event) => event.preventDefault());
+  toggle?.addEventListener('click', () => {
+    if (tracker || starting) stopCamera();
+    else void useCamera();
+  });
   bar?.querySelector<HTMLButtonElement>('button[data-action="leave"]')?.addEventListener('click', () => world.exitXR());
 
   window.addEventListener('keydown', (event) => {
@@ -89,7 +171,12 @@ export function mountPreviewControls(world: World): void {
     if (!on) {
       release();
       input.cursor = null;
+      // The camera is only on while playing.
+      window.clearTimeout(noteTimer);
+      stopCamera();
     }
   });
   showShape();
+  showInput();
+  return { cameraAvailable, useCamera };
 }

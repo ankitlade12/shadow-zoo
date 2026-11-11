@@ -1,5 +1,6 @@
 import { VisibilityState, type World } from '@iwsdk/core';
 import type { XRMode } from '../preview/detect.js';
+import type { PreviewControls } from '../preview/overlay.js';
 
 const NOTES: Record<XRMode, string> = {
   native: 'Made for Meta Quest 3 and 3S. Hands only, seated.',
@@ -7,6 +8,8 @@ const NOTES: Record<XRMode, string> = {
     "No headset here, so this is the desktop preview: Meta's WebXR emulator with a virtual living room and a hand you steer with the mouse. For the real game, open this page in Meta Quest Browser.",
   unsupported: 'Open this page in Meta Quest Browser to play, or on a computer for the desktop preview.',
 };
+const PREVIEW_WITH_CAMERA =
+  "No headset here, so this is the desktop preview: Meta's WebXR emulator with a virtual living room, and your real hands through your camera. For the real game, open this page in Meta Quest Browser.";
 const LOADING = 'Loading the desktop preview…';
 const FAILED: Record<XRMode, string> = {
   native: "Mixed reality didn't start. In Meta Quest Browser, allow hand tracking and spatial data when asked, then try again.",
@@ -18,35 +21,50 @@ const NO_PREVIEW = "This browser can't run the desktop preview. Try a current Ch
 const elements = () => ({
   landing: document.getElementById('landing'),
   start: document.getElementById('start') as HTMLButtonElement | null,
+  startCamera: document.getElementById('start-camera') as HTMLButtonElement | null,
   support: document.getElementById('support'),
 });
 
-/** Shows how this browser will play while the world loads; the start button waits for the world. */
+const canOpenCamera = (): boolean => typeof navigator.mediaDevices?.getUserMedia === 'function';
+
+/** Shows how this browser will play while the world loads; the start buttons wait for the world. */
 export function prepareLanding(mode: XRMode): void {
-  const { start, support } = elements();
+  const { start, startCamera, support } = elements();
   document.body.dataset.xr = mode;
-  if (start) start.disabled = true;
+  const camera = mode === 'preview' && canOpenCamera();
+  if (start) {
+    start.disabled = true;
+    start.textContent = camera ? 'or play with the mouse' : 'Light the lantern';
+  }
+  if (startCamera) {
+    startCamera.disabled = true;
+    startCamera.hidden = !camera;
+    startCamera.innerHTML = 'Light the lantern<small>with my real hands</small>';
+  }
   if (support) support.textContent = mode === 'preview' ? LOADING : NOTES[mode];
 }
 
-/** The desktop preview could not start: say so, and leave the start button off. */
+/** The desktop preview could not start: say so, and leave the start buttons off. */
 export function previewUnavailable(): void {
   prepareLanding('unsupported');
   const { support } = elements();
   if (support) support.textContent = NO_PREVIEW;
 }
 
-/** Shows the 2D welcome page outside XR and starts the session from its button, saying so if it can't. */
-export function mountLanding(world: World, mode: XRMode): void {
-  const { landing, start, support } = elements();
+/**
+ * Shows the 2D welcome page outside XR and starts the session from its buttons, saying so if it
+ * can't. In the desktop preview, `controls` offers real hands through the camera first.
+ */
+export function mountLanding(world: World, mode: XRMode, controls?: PreviewControls): void {
+  const { landing, start, startCamera, support } = elements();
   if (!landing || !start) return;
   world.visibilityState.subscribe((state) => {
     landing.hidden = state !== VisibilityState.NonImmersive;
   });
   if (mode === 'unsupported') return;
-  if (support) support.textContent = NOTES[mode];
-  start.disabled = false;
-  start.addEventListener('click', () => {
+  const camera = !!controls?.cameraAvailable;
+  if (support) support.textContent = mode === 'preview' && camera ? PREVIEW_WITH_CAMERA : NOTES[mode];
+  const launch = (): void => {
     if (world.session || world.sessionRequestPending) return;
     try {
       world.launchXR();
@@ -56,7 +74,20 @@ export function mountLanding(world: World, mode: XRMode): void {
     void settled(world).then((started) => {
       if (!started && support) support.textContent = FAILED[mode];
     });
-  });
+  };
+  start.disabled = false;
+  start.addEventListener('click', launch);
+  if (startCamera && controls && camera) {
+    startCamera.hidden = false;
+    startCamera.disabled = false;
+    startCamera.addEventListener('click', () => {
+      launch();
+      void controls.useCamera();
+    });
+  } else if (startCamera) {
+    startCamera.hidden = true;
+    start.textContent = 'Light the lantern';
+  }
 }
 
 /** Waits for a session request to settle; true when a session started. */
