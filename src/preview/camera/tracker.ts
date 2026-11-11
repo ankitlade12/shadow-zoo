@@ -52,10 +52,9 @@ export async function startCameraTracker(view: { video: HTMLVideoElement; overla
     video.srcObject = null;
   };
   try {
-    video.srcObject = stream;
     video.muted = true;
     video.playsInline = true;
-    await video.play();
+    await playStream(video, stream);
     status('Loading hand tracking…');
     landmarker = await createLandmarker();
   } catch (error) {
@@ -135,6 +134,20 @@ export async function startCameraTracker(view: { video: HTMLVideoElement; overla
       context?.clearRect(0, 0, overlay.width, overlay.height);
     },
   };
+}
+
+/**
+ * Plays the camera stream in the video element. A stream can stall without a first picture; attaching
+ * it again restarts it, so give it a few tries.
+ */
+async function playStream(video: HTMLVideoElement, stream: MediaStream): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    video.srcObject = stream;
+    const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5000));
+    if (await Promise.race([video.play().then(() => true), timeout])) return;
+    video.srcObject = null;
+  }
+  throw new DOMException('The camera sent no picture.', 'NotReadableError');
 }
 
 /** Hand tracking on the GPU where the browser allows it, otherwise on the CPU. */

@@ -55,7 +55,8 @@ export class GhostHand {
    */
   show(def: CreatureDef, stage: Stage, left: boolean, shiftU = -0.16): void {
     this.wanted = true;
-    const key = `${def.id}:${left ? 'L' : 'R'}:${shiftU.toFixed(3)}`;
+    // Laid out again when the stage moves (Re-light), not only when the shape changes.
+    const key = `${def.id}:${left ? 'L' : 'R'}:${shiftU.toFixed(3)}:${stage.hand.map((x) => x.toFixed(3)).join(',')}`;
     if (key === this.species) return;
     this.species = key;
     const toWorld = (c: Vec3): Vec3 => {
