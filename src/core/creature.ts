@@ -14,11 +14,17 @@ export interface CreatureEvent {
 }
 
 /** Walking speed per motion style, in body sizes per second. */
-const SPEED: Readonly<Record<Motion, number>> = { hop: 1.2, trot: 1.5, slither: 0.8, strut: 0.7, dangle: 0.9, creep: 0.3 };
+const SPEED: Readonly<Record<Motion, number>> = { hop: 1.2, trot: 1.5, slither: 0.8, strut: 0.7, dangle: 0.9, creep: 0.3, fly: 1.4 };
 const APPEAR_TIME = 0.8;
 const TRICK_TIME = 0.9;
 /** How quickly a creature eases toward its zoo fit (per second). */
 const FIT_RATE = 2.5;
+
+/** Creatures that live off the ground: the spider on its thread and the bird on the wing. */
+export const airborne = (motion: Motion): boolean => motion === 'dangle' || motion === 'fly';
+
+/** Wing beats: quick while flying, slower while hovering. */
+const wingBeat = (t: number, flying: boolean): number => 0.5 + 0.5 * Math.sin(t * (flying ? 11 : 5.5));
 
 /** The line that walking creatures' silhouette centers follow, below the middle of the pool. */
 export const groundY = (pool: Pool): number => -0.42 * pool.v;
@@ -157,7 +163,7 @@ export class Creature {
   /** Close enough to eat the chased firefly. */
   reached(): boolean {
     if (Math.abs(this.targetX - this.x) >= this.size * 0.3) return false;
-    const reachY = this.motion === 'dangle' ? 0.3 : 0.9;
+    const reachY = this.motion === 'dangle' ? 0.3 : this.motion === 'fly' ? 0.35 : 0.9;
     return Math.abs(this.targetY - this.y) < this.size * reachY;
   }
 
@@ -206,8 +212,9 @@ export class Creature {
         this.appear(dt, pool);
         break;
       case 'rest':
-        this.lift = 0;
-        this.act = idleTwitch(this.phase, this.id);
+        // A resting bird hovers, wings beating slowly, with a gentle bob.
+        this.lift = this.motion === 'fly' ? Math.sin(this.phase * 2.2) * 0.04 * this.size : 0;
+        this.act = this.motion === 'fly' ? wingBeat(this.phase, false) : idleTwitch(this.phase, this.id);
         this.timer -= dt;
         if (this.timer <= 0) this.wander(pool);
         break;
@@ -241,7 +248,7 @@ export class Creature {
     this.timer -= dt;
     const k = 1 - Math.max(0, this.timer) / APPEAR_TIME;
     this.bounce = 1 + 0.2 * Math.sin(Math.PI * k) * (1 - k);
-    const goal = this.motion === 'dangle' ? this.startY : groundY(pool);
+    const goal = airborne(this.motion) ? this.startY : groundY(pool);
     this.y = this.startY + (goal - this.startY) * easeOut(k);
     this.act = 0.5 * Math.sin(k * Math.PI * 3) ** 2;
     this.lift = 0;
@@ -264,6 +271,10 @@ export class Creature {
     if (this.motion === 'dangle') {
       this.targetX = (this.rng() * 2 - 1) * halfWidthAt(pool, 0.3 * pool.v);
       this.targetY = -0.4 * pool.v + this.rng() * 0.9 * pool.v;
+    } else if (this.motion === 'fly') {
+      // Anywhere in the upper part of the light, well above the walkers.
+      this.targetY = -0.1 * pool.v + this.rng() * 0.6 * pool.v;
+      this.targetX = (this.rng() * 2 - 1) * halfWidthAt(pool, this.targetY);
     } else {
       const hw = halfWidthAt(pool, groundY(pool));
       const jitter = this.rng() * 2 - 1;
@@ -289,13 +300,18 @@ export class Creature {
     const dx = goalX - this.x;
     this.x += clamp(dx, -step, step);
     if (Math.abs(dx) > 1e-4) this.facing = dx > 0 ? 1 : -1;
-    if (this.motion === 'dangle') {
+    if (airborne(this.motion)) {
       const goalY = this.mode === 'flee' ? 0.5 * pool.v : this.targetY;
       const dy = goalY - this.y;
       this.y += clamp(dy, -step, step);
       const moving = Math.abs(dx) > 0.004 || Math.abs(dy) > 0.004;
-      this.lift = 0;
-      this.act = moving ? 0.5 + 0.5 * Math.sin(this.phase * 16) : 0.1;
+      if (this.motion === 'fly') {
+        this.lift = Math.sin(this.phase * 2.2) * 0.04 * this.size;
+        this.act = wingBeat(this.phase, moving);
+      } else {
+        this.lift = 0;
+        this.act = moving ? 0.5 + 0.5 * Math.sin(this.phase * 16) : 0.1;
+      }
       if (this.mode === 'wander' && !moving) this.settle();
       return;
     }

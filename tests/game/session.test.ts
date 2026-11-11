@@ -68,14 +68,14 @@ describe('Session', () => {
 
   it("brings back a returning player's zoo with a welcome, then today's visitor", () => {
     const save = freshSave();
-    save.unlocked = ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'];
+    save.unlocked = ['rabbit', 'dog', 'crocodile', 'bird', 'peacock', 'spider', 'turtle'];
     save.bonds = { rabbit: 3 };
     save.streak = 2;
     save.lastDay = '2026-11-09';
     const session = new Session(shapes, sil, withSave(save), at('2026-11-10'), mulberry32(2));
     expect(session.greeting).toBe('next-day');
     session.onStage(pool, 1);
-    expect(session.zoo.creatures).toHaveLength(6);
+    expect(session.zoo.creatures).toHaveLength(7);
     expect(session.zoo.creatures.find((c) => c.species === 'rabbit')!.bond).toBe(3);
     expect(run(session, 1, [hand(null)]).caption).toBe('Welcome back! 3 nights in a row');
     run(session, 5, [hand(null)]);
@@ -105,6 +105,6 @@ describe('Session', () => {
     run(session, 30, [hand(null)]);
     expect(session.visitors.current).toBeNull();
     run(session, 20, [hand(null)]);
-    expect(session.visitors.current?.def.id).toBe('peacock');
+    expect(session.visitors.current?.def.id).toBe('bird');
   });
 });

@@ -49,7 +49,8 @@ export class Puppeteer {
         for (const id of unlocked) {
           if (id === exclude) continue;
           const shape = this.shapes.get(id);
-          if (!shape) continue;
+          // A two-handed creature can't be worn with one hand.
+          if (!shape || shape.def.pair) continue;
           const score = matchScore(this.sil, hand.caps, 0, hand.count, shape.target, this.frame);
           if (score > bestScore) {
             bestScore = score;

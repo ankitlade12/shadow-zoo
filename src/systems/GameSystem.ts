@@ -2,7 +2,7 @@ import { createSystem } from '@iwsdk/core';
 import { blendCapsules, placeCapsules, placePoint, rotateCapsules, rotatePoint, type Point } from '../core/animate.js';
 import type { Creature, Pool } from '../core/creature.js';
 import { BONES } from '../core/joints.js';
-import { buildCreatureShapes } from '../core/library.js';
+import { buildCreatureShapes, canonicalPair, type CreatureDef } from '../core/library.js';
 import { penumbra } from '../core/lantern.js';
 import { HEART } from '../core/particles.js';
 import { CAPSULE_STRIDE, ShadowProjector } from '../core/projector.js';
@@ -35,8 +35,13 @@ export class GameSystem extends createSystem({}) {
   private readonly session = new Session(this.shapes, this.sil, browserStorage(), new Date(), mulberry32(Date.now() >>> 0));
   private readonly caption = new Caption();
   private readonly ghost = new GhostHand();
-  private readonly blendBuf = new Float32Array(BONES.length * CAPSULE_STRIDE);
-  private readonly drawBuf = new Float32Array(BONES.length * CAPSULE_STRIDE);
+  /** The second ghost hand, for two-handed shapes. */
+  private readonly ghostPair = new GhostHand();
+  /** Where a two-handed shape's left wrist sits along the wall from its center (meters), by creature. */
+  private readonly pairWrist = new Map<string, number>();
+  // Room for a two-handed creature's shadow.
+  private readonly blendBuf = new Float32Array(2 * BONES.length * CAPSULE_STRIDE);
+  private readonly drawBuf = new Float32Array(2 * BONES.length * CAPSULE_STRIDE);
   private readonly point: Point = { x: 0, y: 0 };
   private pool: Pool = { u: 1, v: 1 };
   private stageVersion = -1;
@@ -47,6 +52,7 @@ export class GameSystem extends createSystem({}) {
   init(): void {
     this.world.createTransformEntity(this.caption.mesh);
     this.world.createTransformEntity(this.ghost.group);
+    this.world.createTransformEntity(this.ghostPair.group);
     store.session = this.session;
   }
 
@@ -58,6 +64,8 @@ export class GameSystem extends createSystem({}) {
       this.caption.update(delta);
       this.ghost.hide();
       this.ghost.update(delta);
+      this.ghostPair.hide();
+      this.ghostPair.update(delta);
       return;
     }
     if (this.stageVersion !== store.stageVersion) this.onStage(stage, canvas);
@@ -78,15 +86,31 @@ export class GameSystem extends createSystem({}) {
     this.lastVisitor = visitor;
     this.caption.show(view.caption);
     this.caption.update(delta);
-    if (view.ghost) this.ghost.show(this.shapes.get(view.ghost)!.def, stage, this.session.settings.hand === 'left');
-    else this.ghost.hide();
+    this.showGhost(view.ghost ? this.shapes.get(view.ghost)!.def : null, stage);
     this.ghost.update(delta);
+    this.ghostPair.update(delta);
     canvas.begin();
     this.drawHands(canvas, view.worn);
     this.drawVisitor(canvas);
     this.drawZoo(canvas, stage);
     this.drawEmbers(canvas, stage);
     canvas.end();
+  }
+
+  /** The glowing ghost hand demonstrates a shape; a two-handed shape gets both hands, where the pair puts them. */
+  private showGhost(def: CreatureDef | null, stage: Stage): void {
+    if (!def) {
+      this.ghost.hide();
+      this.ghostPair.hide();
+    } else if (def.pair) {
+      let wristX = this.pairWrist.get(def.id);
+      if (wristX === undefined) this.pairWrist.set(def.id, (wristX = canonicalPair(def).left.pos[0]));
+      this.ghost.show(def, stage, true, wristX);
+      this.ghostPair.show(def, stage, false, -wristX);
+    } else {
+      this.ghost.show(def, stage, this.session.settings.hand === 'left');
+      this.ghostPair.hide();
+    }
   }
 
   private onStage(stage: Stage, canvas: ShadowCanvas): void {

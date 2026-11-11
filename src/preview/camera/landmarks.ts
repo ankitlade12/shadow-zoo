@@ -88,14 +88,29 @@ export interface CameraHand {
   readonly image: readonly Point3[];
 }
 
+/** The center of a hand's palm in the picture (x, y from 0 to 1). */
+export function imageCenter(image: readonly Point3[]): { x: number; y: number } {
+  let x = 0;
+  let y = 0;
+  for (const i of PALM) {
+    x += image[i].x / PALM.length;
+    y += image[i].y / PALM.length;
+  }
+  return { x, y };
+}
+
 /**
  * Places a hand the camera sees into the room, in front of the wall. The camera is treated as sitting
  * at the wall looking back at the player, so the hand keeps its real shape and handedness, and its
  * shadow from the lantern behind the player matches what the player sees of their own hand. Moving
  * across the picture moves the shadow across the light pool; nearer the camera (the wall) is farther
  * from the lantern, a smaller shadow. `aspect` is the picture's width over its height.
+ *
+ * With two hands, pass their midpoint as `anchor`: the pair's shadow follows the anchor, and each hand
+ * keeps its true distance from it (the picture's scale comes from the hand's own palm), so shapes made
+ * with both hands, like the bird, hold together.
  */
-export function placeCameraHand(hand: CameraHand, stage: Stage, aspect: number, out: JointSet): void {
+export function placeCameraHand(hand: CameraHand, stage: Stage, aspect: number, out: JointSet, anchor?: { x: number; y: number }): void {
   const { world, image } = hand;
   let cx = 0;
   let cy = 0;
@@ -110,15 +125,26 @@ export function placeCameraHand(hand: CameraHand, stage: Stage, aspect: number, 
     wz += world[i].z / PALM.length;
   }
   const size = Math.hypot((image[MP.middleMcp].x - image[MP.wrist].x) * aspect, image[MP.middleMcp].y - image[MP.wrist].y);
+  const palm = Math.hypot(
+    world[MP.middleMcp].x - world[MP.wrist].x,
+    world[MP.middleMcp].y - world[MP.wrist].y,
+    world[MP.middleMcp].z - world[MP.wrist].z,
+  );
   const reach = Math.min(REACH_MAX, Math.max(REACH_MIN, size / REFERENCE_SIZE));
+  const ax = anchor?.x ?? cx;
+  const ay = anchor?.y ?? cy;
   const limitU = stage.poolU * 1.1;
   const limitV = stage.poolV * 1.1;
-  const su = Math.min(limitU, Math.max(-limitU, (0.5 - cx) * 2 * stage.poolU * POSITION_GAIN));
-  const sv = Math.min(limitV, Math.max(-limitV, (0.5 - cy) * 2 * stage.poolV * POSITION_GAIN));
+  const su = Math.min(limitU, Math.max(-limitU, (0.5 - ax) * 2 * stage.poolU * POSITION_GAIN));
+  const sv = Math.min(limitV, Math.max(-limitV, (0.5 - ay) * 2 * stage.poolV * POSITION_GAIN));
   const wall = add(stage.origin, add(scale(stage.u, su), scale(stage.v, sv)));
-  const center = handPoint(stage, wall, reach);
   // Camera axes in the room: its right is the player's left (-u), its down is -v, away from it is +n.
   const { u, v, n } = stage;
+  // Off the anchor by the hand's true distance: picture heights times meters per picture height.
+  const metersPerHeight = size > 1e-6 ? palm / size : 0;
+  const ox = (cx - ax) * aspect * metersPerHeight;
+  const oy = (cy - ay) * metersPerHeight;
+  const center = add(handPoint(stage, wall, reach), add(scale(u, -ox), scale(v, -oy)));
   for (let j = 0; j < JOINT_COUNT; j++) {
     const k = LANDMARK_OF_JOINT[j];
     if (k < 0) continue;
@@ -130,11 +156,6 @@ export function placeCameraHand(hand: CameraHand, stage: Stage, aspect: number, 
   for (const [joint, knuckle, f] of METACARPALS) {
     for (let a = 0; a < 3; a++) out.pos[joint * 3 + a] = out.pos[a] + (out.pos[knuckle * 3 + a] - out.pos[a]) * f;
   }
-  const palm = Math.hypot(
-    world[MP.middleMcp].x - world[MP.wrist].x,
-    world[MP.middleMcp].y - world[MP.wrist].y,
-    world[MP.middleMcp].z - world[MP.wrist].z,
-  );
   const s = palm > 0.03 && palm < 0.2 ? palm / TEMPLATE_PALM : 1;
   for (let j = 0; j < JOINT_COUNT; j++) out.rad[j] = TEMPLATE_RADII[j] * s;
 }

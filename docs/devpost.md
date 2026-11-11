@@ -15,7 +15,7 @@
 
 Remember making shadow animals on the wall as a kid? Shadow Zoo brings that magic into mixed reality, and lets the shadows come alive.
 
-A warm lantern glows behind you and lights the real wall in front of you. Your tracked hands cast soft shadows into that pool of light. A glowing outline appears: a rabbit. Shape your hand until its shadow fits, and the rabbit wriggles free, hops along your wall and blinks at you. Over your first sessions you meet a dog, a crocodile, a peacock, a spider and a turtle. Each is a real one-handed shadow puppet, and each has its own personality and way of moving.
+A warm lantern glows behind you and lights the real wall in front of you. Your tracked hands cast soft shadows into that pool of light. A glowing outline appears: a rabbit. Shape your hand until its shadow fits, and the rabbit wriggles free, hops along your wall and blinks at you. Over your first sessions you meet a dog, a crocodile, a peacock, a spider and a turtle, each a real one-handed shadow puppet with its own personality and way of moving. Then comes the classic: hook your thumbs together, spread your fingers, and a bird made of both your hands takes wing and flies around the light.
 
 Then you play with them, using only your hands:
 
@@ -51,7 +51,7 @@ Shadow Zoo is built for coming back. Your zoo is saved on your device and greets
 - **Telling creatures apart.** Hand silhouettes share a big palm blob, so a plain overlap score confused them; the swan and spider scored 0.83. Adding a radial signature brought the worst cross-creature score down to 0.27 while keeping every creature robust to hand size, rotation and noise.
 - **Finding the right wall.** In testing, a picture frame in front of the wall was detected as the "wall". The game now prefers real walls by size and semantic label.
 - **A crowded wall.**
-  - A creature cast by your hand is about half a meter across on a wall three meters away. With all six on the wall, they merged into one dark blob.
+  - A creature cast by your hand is about half a meter across on a wall three meters away. With the whole zoo on the wall, they merged into one dark blob.
   - The zoo now makes room. Each creature appears at the size you cast it, then everyone eases to a shared smaller size as the zoo grows. Walkers settle into the gaps between their neighbors.
   - In simulation, overlapping pairs dropped from about 30% to under 10%.
   - Shrinking exposed a real bug: fireflies hovered just out of reach of the smallest creatures. A regression test caught it, and fireflies now settle lower.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Emulator pose drill: resets the zoo through the menu, then brings all six creatures to life
+# Emulator pose drill: resets the zoo through the menu, then brings all seven creatures to life
 # with built-in emulator hand poses, timing each match. Needs a running headless dev server
 # (iwsdk dev up --ai-mode agent --headless). Usage: bash scripts/drill.sh [output-dir]
 set -u
@@ -98,6 +98,28 @@ drill() {
   echo "$name: $took s"
 }
 
+# The two-handed bird: both hands open, thumbs together at the comfortable point, wrists crossed,
+# fingers fanned out and up as wings (the layout of the game's canonical pair).
+drill_pair() {
+  local name=$1 limit=$2
+  local before seen
+  seen=$(matches "[ShadowZoo] visitor $name")
+  place '{"device":"hand-right","poseId":"default"}' '[0,1,0]' '[0,0,-1]'
+  $B xr set-transform --input-json '{"device":"hand-right","anchor":"wrist","position":{"x":0.35,"y":0.9,"z":0.1},"orientation":"auto"}' >/dev/null 2>&1
+  await_visitor "$name" "$seen" || { echo "$name: visitor never appeared"; return; }
+  before=$(count reveal)
+  $B xr set-hand-pose --input-json '{"device":"hand-left","poseId":"open"}' >/dev/null 2>&1
+  $B xr set-transform --input-json '{"device":"hand-left","anchor":"wrist","position":{"x":0.061,"y":1.3,"z":-0.4},"orientation":{"fingers":[-1,0.45,0],"palm":[0,0,-1]}}' >/dev/null 2>&1
+  $B xr set-hand-pose --input-json '{"device":"hand-right","poseId":"open"}' >/dev/null 2>&1
+  $B xr set-transform --input-json '{"device":"hand-right","anchor":"wrist","position":{"x":0.039,"y":1.3,"z":-0.4},"orientation":{"fingers":[1,0.45,0],"palm":[0,0,-1]}}' >/dev/null 2>&1
+  local took
+  took=$(await_sound reveal "$before" "$limit")
+  $B browser screenshot --output-file "$OUT/$name.png" >/dev/null 2>&1
+  echo "$name: $took s"
+  # The left hand goes back down, out of the light.
+  $B xr set-transform --input-json '{"device":"hand-left","anchor":"wrist","position":{"x":-0.35,"y":0.9,"z":0.1},"orientation":"auto"}' >/dev/null 2>&1
+}
+
 feed() {
   local before
   before=$(count eat)
@@ -111,6 +133,7 @@ drill rabbit '{"device":"hand-right","poseId":"peace"}' '[0.45,1,0]' '[0,0,-1]' 
 feed
 drill dog '{"device":"hand-right","poseId":"flat","fingers":{"thumb":"thumbs-up"}}' '[-1,0.1,0]' '[0,0,1]' 70
 drill crocodile '{"device":"hand-right","poseId":"flat","fingers":{"thumb":"open"}}' '[-1,0.05,0]' '[0,0,-1]' 70
+drill_pair bird 80
 drill peacock '{"device":"hand-right","poseId":"open"}' '[0.2,1,0]' '[0,0,-1]' 80
 drill spider '{"device":"hand-right","poseId":"claw","fingers":{"thumb":"open"}}' '[0,-1,0]' '[0,0,-1]' 80
 drill turtle '{"device":"hand-right","poseId":"thumbs-up"}' '[0,-0.3,-1]' '[0,-1,0]' 80

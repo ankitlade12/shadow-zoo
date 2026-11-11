@@ -1,8 +1,9 @@
-import { BONES, J } from './joints.js';
+import { BONES, J, JOINT_COUNT } from './joints.js';
 import {
   buildJointSet,
   builtinAngles,
   jointDistance,
+  mirrorJointSet,
   orientJointSet,
   type HandPoseAngles,
   type JointSet,
@@ -11,9 +12,9 @@ import { CAPSULE_STRIDE, ShadowProjector, type StagePlane } from './projector.js
 import { Silhouettes, TargetShape } from './silhouette.js';
 import type { Vec3 } from './vec.js';
 
-export type CreatureId = 'rabbit' | 'dog' | 'crocodile' | 'peacock' | 'spider' | 'turtle';
+export type CreatureId = 'rabbit' | 'dog' | 'crocodile' | 'peacock' | 'spider' | 'turtle' | 'bird';
 /** How a living creature moves around the light pool. */
-export type Motion = 'hop' | 'trot' | 'slither' | 'strut' | 'dangle' | 'creep';
+export type Motion = 'hop' | 'trot' | 'slither' | 'strut' | 'dangle' | 'creep' | 'fly';
 
 export interface CreatureDef {
   readonly id: CreatureId;
@@ -29,6 +30,11 @@ export interface CreatureDef {
   readonly eye: { readonly joint: number; readonly dx: number; readonly dy: number };
   /** Joints whose distance is "open" in the base pose and "closed" in the act pose. */
   readonly actuator: { readonly a: number; readonly b: number };
+  /**
+   * Cast with both hands: this hand (left-hand data, as defined) and its mirror image, thumbs together
+   * at the center. Matched against both hands' shadows at once, and never worn.
+   */
+  readonly pair?: boolean;
 }
 
 const B = builtinAngles;
@@ -54,6 +60,17 @@ const SPIDER: HandPoseAngles = {
 };
 // Fist as the shell seen end-on, short bent thumb as the head.
 const TURTLE: HandPoseAngles = { ...B['thumbs-up'], thumb: { ...B['thumbs-up'].thumb, mcp: 25, ip: 20 } };
+// Two open hands with hooked thumbs: the thumbs are the head, the spread fingers the wings.
+const BIRD: HandPoseAngles = { ...B.open };
+/** A finger of the open hand, folded down: a wing beat. */
+const folded = (f: HandPoseAngles['index']) => ({ ...f, mcp: 48, pip: 32, dip: 14 });
+const BIRD_FLAP: HandPoseAngles = {
+  ...B.open,
+  index: folded(B.open.index),
+  middle: folded(B.open.middle),
+  ring: folded(B.open.ring),
+  pinky: folded(B.open.pinky),
+};
 
 export const CREATURES: readonly CreatureDef[] = [
   {
@@ -129,6 +146,18 @@ export const CREATURES: readonly CreatureDef[] = [
     eye: { joint: J.thumbTip, dx: -0.03, dy: 0.06 },
     actuator: { a: J.thumbTip, b: J.indexProx },
   },
+  {
+    // Two hands, backs to the light: fingers fanned out and up as wings, thumbs hooked as the head.
+    id: 'bird',
+    name: 'Bird',
+    angles: BIRD,
+    act: BIRD_FLAP,
+    motion: 'fly',
+    facing: { fingers: [-1, 0.45, 0], palm: [0, 0, -1] },
+    eye: { joint: J.thumbTip, dx: 0.02, dy: 0.03 },
+    actuator: { a: J.middleTip, b: J.wrist },
+    pair: true,
+  },
 ];
 
 export const creatureDef = (id: CreatureId): CreatureDef => {
@@ -146,10 +175,34 @@ export function canonicalJoints(def: CreatureDef, angles: HandPoseAngles = def.a
   return orientJointSet(buildJointSet(angles), 'left', def.facing, CANON_WRIST);
 }
 
+/** Gap between a pair's two thumb tips (meters): just touching. */
+const PAIR_GAP = 0.004;
+
+/**
+ * A two-handed creature's hands in canonical stage space: the left hand as defined, moved so its thumb
+ * tip meets the center line, and the right hand its mirror image. The act pose keeps the base pose's
+ * offset, so the hands don't jump as it moves.
+ */
+export function canonicalPair(def: CreatureDef, angles: HandPoseAngles = def.angles): { left: JointSet; right: JointSet } {
+  const dx = -PAIR_GAP / 2 - canonicalJoints(def).pos[J.thumbTip * 3];
+  const left = canonicalJoints(def, angles);
+  for (let i = 0; i < JOINT_COUNT; i++) left.pos[i * 3] += dx;
+  return { left, right: mirrorJointSet(left) };
+}
+
 export function canonicalCapsules(joints: JointSet, out = new Float32Array(BONES.length * CAPSULE_STRIDE)): { caps: Float32Array; count: number } {
   const projector = new ShadowProjector();
   projector.setup(CANON_LIGHT, CANON_STAGE);
   return { caps: out, count: projector.projectBones(joints, out, 0) };
+}
+
+/** Both hands of a pair as one shadow: the left hand's capsules, then the right hand's. */
+export function canonicalPairCapsules(pair: { left: JointSet; right: JointSet }): { caps: Float32Array; count: number } {
+  const out = new Float32Array(2 * BONES.length * CAPSULE_STRIDE);
+  const projector = new ShadowProjector();
+  projector.setup(CANON_LIGHT, CANON_STAGE);
+  const count = projector.projectBones(pair.left, out, 0);
+  return { caps: out, count: count + projector.projectBones(pair.right, out, count) };
 }
 
 export interface CreatureShape {
@@ -172,10 +225,13 @@ export function buildCreatureShapes(sil = new Silhouettes()): Map<CreatureId, Cr
   const projector = new ShadowProjector();
   projector.setup(CANON_LIGHT, CANON_STAGE);
   for (const def of CREATURES) {
-    const joints = canonicalJoints(def);
-    const actJoints = canonicalJoints(def, def.act);
-    const { caps, count } = canonicalCapsules(joints);
-    const act = canonicalCapsules(actJoints);
+    // A pair's eye and actuator are on its left hand; its shadow is both hands.
+    const pair = def.pair ? canonicalPair(def) : null;
+    const actPair = def.pair ? canonicalPair(def, def.act) : null;
+    const joints = pair ? pair.left : canonicalJoints(def);
+    const actJoints = actPair ? actPair.left : canonicalJoints(def, def.act);
+    const { caps, count } = pair ? canonicalPairCapsules(pair) : canonicalCapsules(joints);
+    const act = actPair ? canonicalPairCapsules(actPair) : canonicalCapsules(actJoints);
     if (act.count !== count) throw new Error(`${def.id}: the action pose lost bones`);
     const target = new TargetShape(caps, count, sil);
     const e = def.eye.joint * 3;

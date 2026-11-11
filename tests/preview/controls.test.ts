@@ -11,13 +11,14 @@ import {
 } from '../../src/preview/controls.js';
 
 describe('preview keys', () => {
-  it('makes the six creature shapes with keys 1 to 6, in library order', () => {
-    expect(['1', '2', '3', '4', '5', '6'].map(shapeForKey)).toEqual(CREATURES.map((c) => c.id));
+  it('makes the creature shapes with keys 1 to 7, in library order (7 is the two-handed bird)', () => {
+    expect(['1', '2', '3', '4', '5', '6', '7'].map(shapeForKey)).toEqual(CREATURES.map((c) => c.id));
+    expect(shapeForKey('7')).toBe('bird');
   });
 
   it('opens the hand with 0 and ignores other keys', () => {
     expect(shapeForKey('0')).toBeNull();
-    for (const key of ['7', '9', 'a', ' ', 'Enter']) expect(shapeForKey(key)).toBeUndefined();
+    for (const key of ['8', '9', 'a', ' ', 'Enter']) expect(shapeForKey(key)).toBeUndefined();
   });
 });
 

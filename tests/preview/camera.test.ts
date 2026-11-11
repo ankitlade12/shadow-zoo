@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { J, JOINT_COUNT } from '../../src/core/joints.js';
-import { buildCreatureShapes, CREATURES } from '../../src/core/library.js';
+import { buildCreatureShapes, canonicalPair, CREATURES, creatureDef } from '../../src/core/library.js';
 import { buildJointSet, createJointSet, jointPos, orientJointSet, type JointSet } from '../../src/core/poses.js';
 import { TUNING } from '../../src/core/matcher.js';
 import { CAPSULE_STRIDE, ShadowProjector } from '../../src/core/projector.js';
@@ -62,7 +62,7 @@ const shadowAt = (p: Vec3): [number, number] => {
 
 describe('placeCameraHand', () => {
   it('rebuilds the hand the camera sees with its real shape and handedness, at the comfortable point', () => {
-    for (const def of CREATURES) {
+    for (const def of CREATURES.filter((c) => !c.pair)) {
       const original = posed(def.id);
       const out = createJointSet();
       placeCameraHand(seenByCamera(original, { x: 0.5, y: 0.5 }), stage, ASPECT, out);
@@ -84,7 +84,7 @@ describe('placeCameraHand', () => {
     projector.setup(stage.lantern, stage);
     const caps = new Float32Array(64 * CAPSULE_STRIDE);
     const score = (js: JointSet, id: string) => matchScore(sil, caps, 0, projector.projectBones(js, caps, 0), shapes.get(id as never)!.target, createFrame());
-    for (const def of CREATURES) {
+    for (const def of CREATURES.filter((c) => !c.pair)) {
       const original = posed(def.id);
       const out = createJointSet();
       placeCameraHand(seenByCamera(original, { x: 0.5, y: 0.5 }), stage, ASPECT, out);
@@ -93,6 +93,48 @@ describe('placeCameraHand', () => {
       expect(Math.abs(seen - score(original, def.id))).toBeLessThan(0.03);
       expect(seen).toBeGreaterThan(TUNING.normal.threshold);
     }
+  });
+
+  it('keeps two hands as far apart as they really are, so the two-handed bird holds its shape', () => {
+    // The bird held at the comfortable point: canonical stage space to the room around stage.hand.
+    const { left, right } = canonicalPair(creatureDef('bird'));
+    const both = [left, right];
+    const c = [0, 0, 0];
+    for (const js of both) for (let j = 0; j < JOINT_COUNT; j++) for (let a = 0; a < 3; a++) c[a] += js.pos[j * 3 + a] / (2 * JOINT_COUNT);
+    const room = both.map((js) => {
+      const out = createJointSet();
+      for (let j = 0; j < JOINT_COUNT; j++) {
+        const [x, y, z] = [js.pos[j * 3] - c[0], js.pos[j * 3 + 1] - c[1], js.pos[j * 3 + 2] - c[2]];
+        for (let a = 0; a < 3; a++) out.pos[j * 3 + a] = stage.hand[a] + stage.u[a] * x + stage.v[a] * y + stage.n[a] * z;
+        out.rad[j] = js.rad[j];
+      }
+      return out;
+    });
+    // Where each hand appears in the picture: its offset from the pair's center, at the picture's scale.
+    const palm = Math.hypot(...sub(jointPos(left, J.middleProx), jointPos(left, J.wrist)).slice(0, 2));
+    const k = REFERENCE_SIZE / palm;
+    const at = room.map((js) => {
+      const d = sub(palmCenterOf(js), stage.hand);
+      return { x: 0.5 - (dot(d, stage.u) * k) / ASPECT, y: 0.5 - dot(d, stage.v) * k };
+    });
+    const anchor = { x: (at[0].x + at[1].x) / 2, y: (at[0].y + at[1].y) / 2 };
+    const seen = room.map((js, i) => {
+      const out = createJointSet();
+      placeCameraHand(seenByCamera(js, at[i]), stage, ASPECT, out, anchor);
+      return out;
+    });
+    const sil = new Silhouettes();
+    const target = buildCreatureShapes(sil).get('bird')!.target;
+    const projector = new ShadowProjector();
+    projector.setup(stage.lantern, stage);
+    const caps = new Float32Array(128 * CAPSULE_STRIDE);
+    const cast = (pair: JointSet[]) => {
+      const n = projector.projectBones(pair[0], caps, 0);
+      return matchScore(sil, caps, 0, n + projector.projectBones(pair[1], caps, n), target, createFrame());
+    };
+    const direct = cast(room);
+    expect(Math.abs(cast(seen) - direct)).toBeLessThan(0.03);
+    expect(cast(seen)).toBeGreaterThan(TUNING.normal.threshold);
   });
 
   it("moves the shadow the way the player moves their hand", () => {

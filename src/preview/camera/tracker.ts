@@ -4,7 +4,7 @@ import wasmBinaryPath from '@mediapipe/tasks-vision/vision_wasm_internal.wasm?ur
 import { createJointSet, type Handedness } from '../../core/poses.js';
 import type { Stage } from '../../core/stage.js';
 import type { HandSample } from '../../runtime/store.js';
-import { handFromLabel, OneEuro, placeCameraHand, type CameraHand, type Point3 } from './landmarks.js';
+import { handFromLabel, imageCenter, OneEuro, placeCameraHand, type CameraHand, type Point3 } from './landmarks.js';
 import modelAssetPath from './hand_landmarker.task?url';
 
 /** A hand the camera last saw, and when (seconds, performance clock). */
@@ -114,7 +114,15 @@ export async function startCameraTracker(view: { video: HTMLVideoElement; overla
         out.tracked = false;
         return;
       }
-      placeCameraHand(hand.hand, stage, video.videoWidth / video.videoHeight, scratch);
+      // With both hands in view, they move as a pair and keep their true spacing (the bird needs it).
+      const other = seen[side === 'left' ? 'right' : 'left'];
+      let anchor: { x: number; y: number } | undefined;
+      if (other && now - other.time <= lostAfter(interval)) {
+        const a = imageCenter(hand.hand.image);
+        const b = imageCenter(other.hand.image);
+        anchor = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      }
+      placeCameraHand(hand.hand, stage, video.videoWidth / video.videoHeight, scratch, anchor);
       filters[side].filter(scratch.pos, now, out.joints.pos);
       out.joints.rad.set(scratch.rad);
       out.tracked = true;

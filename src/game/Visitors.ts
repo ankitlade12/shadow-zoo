@@ -1,5 +1,7 @@
+import { BONES } from '../core/joints.js';
 import { CREATURES, type CreatureId, type CreatureShape } from '../core/library.js';
 import { Matcher, TUNING, type MatchTuning } from '../core/matcher.js';
+import { CAPSULE_STRIDE } from '../core/projector.js';
 import { createFrame, matchScore, type Silhouettes } from '../core/silhouette.js';
 import type { Revealed } from './events.js';
 import type { HandShadow } from './hands.js';
@@ -32,6 +34,8 @@ export class Visitors {
   private readonly queue: Entry[];
   private readonly frame = createFrame();
   private readonly best = createFrame();
+  /** Both hands' shadows together, for a two-handed visitor. */
+  private readonly both = new Float32Array(2 * (BONES.length + 1) * CAPSULE_STRIDE);
   private wait: number;
   private pending = 0;
 
@@ -82,16 +86,27 @@ export class Visitors {
     const tick = this.pending;
     this.pending = 0;
     let bestScore: number | null = null;
-    for (const hand of hands) {
-      if (!hand.tracked || hand.count === 0) continue;
-      let score = matchScore(this.sil, hand.caps, 0, hand.count, this.current.target, this.frame);
-      if (this.options.minSize && this.frame.size < this.options.minSize) score = Math.min(score, SMALL_SHADOW_CAP);
-      if (bestScore === null || score > bestScore) {
-        bestScore = score;
+    const score = (caps: Float32Array, count: number): void => {
+      let value = matchScore(this.sil, caps, 0, count, this.current!.target, this.frame);
+      if (this.options.minSize && this.frame.size < this.options.minSize) value = Math.min(value, SMALL_SHADOW_CAP);
+      if (bestScore === null || value > bestScore) {
+        bestScore = value;
         this.best.cx = this.frame.cx;
         this.best.cy = this.frame.cy;
         this.best.size = this.frame.size;
       }
+    };
+    if (this.current.def.pair) {
+      // A two-handed visitor is both hands' shadows at once; one hand alone scores nothing.
+      const tracked = hands.filter((h) => h.tracked && h.count > 0);
+      if (tracked.length >= 2) {
+        const [a, b] = tracked;
+        this.both.set(a.caps.subarray(0, a.count * CAPSULE_STRIDE), 0);
+        this.both.set(b.caps.subarray(0, b.count * CAPSULE_STRIDE), a.count * CAPSULE_STRIDE);
+        score(this.both, a.count + b.count);
+      } else if (tracked.length === 1) bestScore = 0;
+    } else {
+      for (const hand of hands) if (hand.tracked && hand.count > 0) score(hand.caps, hand.count);
     }
     if (this.matcher.update(tick, bestScore) !== 'matched') return null;
     const shape = this.current;

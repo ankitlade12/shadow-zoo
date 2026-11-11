@@ -1,5 +1,5 @@
 import type { Twist } from '../core/daily.js';
-import type { CreatureId } from '../core/library.js';
+import { creatureDef, type CreatureId } from '../core/library.js';
 
 /** First-time teaching steps: make the rabbit, feed it, pet it. */
 export type Step = 'make' | 'feed' | 'pet' | 'done';
@@ -49,6 +49,7 @@ export function captionFor(s: CaptionInput): string | null {
     if (s.twist === 'big') return 'A big visitor! Move your hand toward the light';
     if (s.twist === 'steady') return 'A shy visitor. Hold the shape steady';
     if (s.step === 'make') return 'Make a rabbit with your hand';
+    if (creatureDef(s.visitor).pair) return 'Use both hands: hook your thumbs together';
     return stuck(s) ? 'Copy the glowing shape' : null;
   }
   if (s.step === 'feed') return 'Pinch to give it a firefly';

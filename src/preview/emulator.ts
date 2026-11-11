@@ -71,11 +71,14 @@ export async function startEmulator(): Promise<EmulatedDevice> {
   device.fovy = FOV;
   device.position.set(0, HEAD_HEIGHT, 0);
   device.quaternion.set(Math.sin(HEAD_PITCH / 2), 0, 0, Math.cos(HEAD_PITCH / 2));
-  // One hand, the left: the creature shapes and their outlines are left-handed, so its shadow fits them exactly.
+  // The left hand plays: the creature shapes and their outlines are left-handed, so its shadow fits them exactly.
   device.hands.right.connected = false;
   device.hands.left.connected = false;
   device.hands.left.setPin(null);
+  device.hands.right.setPin(null);
+  // The right hand joins the left for two-handed shapes (the bird).
   addPoses(device.hands.left);
+  addPoses(device.hands.right);
   return device;
 }
 

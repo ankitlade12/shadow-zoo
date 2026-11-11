@@ -3,9 +3,9 @@
 //   SEED=returning ./node_modules/.bin/iwsdk browser run scripts/seed-save.mjs
 // SEED values:
 //   fresh      no save: a first-time player
-//   returning  all six creatures, last played yesterday on a two-night streak, so the game opens
+//   returning  all seven creatures, last played yesterday on a two-night streak, so the game opens
 //              with "Welcome back!" and today's visitor
-//   full       all six creatures, today's visitor already matched: just the zoo
+//   full       all seven creatures, today's visitor already matched: just the zoo
 const KEY = 'shadowzoo.save.v1';
 
 /** Writes the save for `mode` into the page's localStorage and reloads the page. */
@@ -25,9 +25,9 @@ export async function seed(page, mode) {
       const today = mode === 'full';
       const save = {
         version: 1,
-        unlocked: ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'],
-        bonds: { rabbit: 3, dog: 3, crocodile: 3, peacock: 3, spider: 3, turtle: 3 },
-        stars: { rabbit: 3, dog: 3, crocodile: 2, peacock: 2, spider: 3, turtle: 2 },
+        unlocked: ['rabbit', 'dog', 'crocodile', 'bird', 'peacock', 'spider', 'turtle'],
+        bonds: { rabbit: 3, dog: 3, crocodile: 3, bird: 3, peacock: 3, spider: 3, turtle: 3 },
+        stars: { rabbit: 3, dog: 3, crocodile: 2, bird: 2, peacock: 2, spider: 3, turtle: 2 },
         embers: today ? 3 : 2,
         streak: today ? 3 : 2,
         lastDay: day(today ? 0 : -1),

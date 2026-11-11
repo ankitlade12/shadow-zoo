@@ -2,8 +2,8 @@ import { dailyVisitor, type Twist } from '../core/daily.js';
 import type { CreatureId } from '../core/library.js';
 import type { SaveData } from '../core/save.js';
 
-/** The order creatures come to life. */
-export const ORDER: readonly CreatureId[] = ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'];
+/** The order creatures come to life: the two-handed bird right after the three guided ones. */
+export const ORDER: readonly CreatureId[] = ['rabbit', 'dog', 'crocodile', 'bird', 'peacock', 'spider', 'turtle'];
 /** The first visitors arrive back to back; later ones after a little play. */
 const GUIDED = 3;
 const PLAY_SECONDS = 45;

@@ -16,7 +16,7 @@ Shadow Zoo is a hands-first mixed reality game for Meta Quest, built with Meta's
 5. Make the shape of a creature you've already met to **wear it**: snap its jaw, ears or tail to make its voice. Your dog's bark scatters the rabbits.
 6. Come back tomorrow. Your zoo is saved, your streak warms the lantern, and a daily visitor brings a twist.
 
-**Creatures:** rabbit, dog, crocodile, peacock, spider and turtle. All six are one-handed, and either hand works.
+**Creatures:** rabbit, dog, crocodile, peacock, spider and turtle are one-handed, and either hand works. The bird takes both hands: hook your thumbs together and spread your fingers as wings, then watch it fly around the light.
 
 **Comfort and access:**
 - Seated play, and the light pool stays within a comfortable field of view.
@@ -44,7 +44,7 @@ No headset? On a computer, the same link opens a desktop preview. It runs Meta's
 | Control | What it does |
 | --- | --- |
 | Move the mouse | Moves your hand; its shadow lands under the cursor |
-| 1 to 6 | Makes the rabbit, dog, crocodile, peacock, spider or turtle shape |
+| 1 to 7 | Makes the rabbit, dog, crocodile, peacock, spider, turtle or two-handed bird shape |
 | 0 | Opens the hand, for petting |
 | Click | Pinches: releases a firefly, or presses a menu button |
 | Hold Space | Snaps the jaw (or ears, legs, head) of a creature you're wearing |
@@ -105,7 +105,7 @@ src/core/     pure game math and logic (no WebXR; unit-tested)
   poses        hand joint sets built on the WebXR emulator's hand skeleton
   projector    point-light projection of hand bones onto the wall plane
   silhouette   capsule rasterizer, normalized IoU plus a radial signature for shape matching
-  library      the six creatures: hand shapes, actions, motion styles
+  library      the seven creatures: hand shapes (one hand, or two for the bird), actions, motion styles
   stage        wall choice from plane detection, light pool, lantern placement
   creature, fireflies, particles, interact, puppet, matcher, save, daily
 src/game/     the game: hand shadows, visitors, wearing, the zoo, progression, onboarding, session
@@ -118,7 +118,7 @@ src/systems/  IWSDK ECS systems: hands, stage, menu, game, render, sound, previe
 - **Matching.** The hand's shadow is normalized for position and size, then compared with each creature's silhouette. The comparison combines overlap (IoU) with a 64-direction radial signature, which finds the rotation and penalizes misplaced ears, jaws or legs. A short hold and a gently relaxing threshold keep it fair.
 - **Creatures.** Creatures are themselves hand shadows. Each one blends between its base pose and an action pose (ear twitch, jaw snap, tail fan, leg curl, head tuck) and moves with its own gait.
 - **A zoo that makes room.**
-  - A creature appears at the size your hand cast it. As the zoo fills, everyone eases to a shared smaller size, so six creatures still read as six animals.
+  - A creature appears at the size your hand cast it. As the zoo fills, everyone eases to a shared smaller size, so a full zoo still reads as separate animals.
   - Walkers spread into the gaps between their neighbors.
   - A creature holds still while your shadow rests on it.
 - **Audio.** All sound is synthesized with the Web Audio API and placed on the wall in 3D, so there are no audio assets.

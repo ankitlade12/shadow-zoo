@@ -1,4 +1,4 @@
-import { groundY, halfWidthAt, type Creature, type Pool } from './creature.js';
+import { airborne, groundY, halfWidthAt, type Creature, type Pool } from './creature.js';
 
 /** Ground-line width one creature needs, in body sizes: silhouettes run 1.1–1.8 sizes wide, plus a little air. */
 const WIDTH_PER_SIZE = 1.5;
@@ -23,7 +23,7 @@ export function spreadSpot(self: Creature, creatures: readonly Creature[], halfW
   let left = -Infinity;
   let right = Infinity;
   for (const c of creatures) {
-    if (c === self || c.motion === 'dangle') continue;
+    if (c === self || airborne(c.motion)) continue;
     const x = c.spotX;
     if (x < self.x || (x === self.x && c.id < self.id)) left = Math.max(left, x);
     else right = Math.min(right, x);

@@ -20,7 +20,7 @@ const REACH_STEP = 1.08;
 
 export const createPreviewInput = (): PreviewInput => ({ shape: null, act: false, pinch: false, reach: 1, cursor: null });
 
-/** Keys 1 to 6 make the creatures' shapes in library order and 0 opens the hand; undefined for any other key. */
+/** Keys 1 to 7 make the creatures' shapes in library order (7 is the two-handed bird) and 0 opens the hand; undefined for any other key. */
 export function shapeForKey(key: string): CreatureId | null | undefined {
   if (key === '0') return null;
   if (!/^[1-9]$/.test(key)) return undefined;

@@ -23,15 +23,15 @@ describe('Progression', () => {
     const byTime = new Progression(save, today);
     expect(byTime.nextVisitor()).toBeNull();
     byTime.tick(45);
-    expect(byTime.nextVisitor()?.species).toBe('peacock');
+    expect(byTime.nextVisitor()?.species).toBe('bird');
     const byFeeding = new Progression(save, today);
     for (let i = 0; i < 3; i++) byFeeding.onEat();
-    expect(byFeeding.nextVisitor()?.species).toBe('peacock');
+    expect(byFeeding.nextVisitor()?.species).toBe('bird');
   });
 
   it('offers a daily visitor with a twist once the zoo is complete, once a day', () => {
     const save = freshSave();
-    save.unlocked = ['rabbit', 'dog', 'crocodile', 'peacock', 'spider', 'turtle'];
+    save.unlocked = ['rabbit', 'dog', 'crocodile', 'bird', 'peacock', 'spider', 'turtle'];
     const p = new Progression(save, today);
     const plan = p.nextVisitor()!;
     expect(plan.kind).toBe('daily');

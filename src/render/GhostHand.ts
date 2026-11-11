@@ -49,10 +49,13 @@ export class GhostHand {
     this.group.visible = false;
   }
 
-  /** Demonstrates `def` with the right hand (or the left), a little to the left of the comfortable hand point. */
-  show(def: CreatureDef, stage: Stage, left: boolean): void {
+  /**
+   * Demonstrates `def` with the right hand (or the left), its wrist `shiftU` meters along the wall from
+   * the comfortable hand point (a little to the left by default; a two-handed shape places each hand).
+   */
+  show(def: CreatureDef, stage: Stage, left: boolean, shiftU = -0.16): void {
     this.wanted = true;
-    const key = `${def.id}:${left ? 'L' : 'R'}`;
+    const key = `${def.id}:${left ? 'L' : 'R'}:${shiftU.toFixed(3)}`;
     if (key === this.species) return;
     this.species = key;
     const toWorld = (c: Vec3): Vec3 => {
@@ -63,7 +66,7 @@ export class GhostHand {
         stage.u[2] * x + stage.v[2] * c[1] + stage.n[2] * c[2],
       ];
     };
-    const anchor: Vec3 = [stage.hand[0] - stage.u[0] * 0.16, stage.hand[1] + 0.06, stage.hand[2] - stage.u[2] * 0.16];
+    const anchor: Vec3 = [stage.hand[0] + stage.u[0] * shiftU, stage.hand[1] + 0.06, stage.hand[2] + stage.u[2] * shiftU];
     const base = buildJointSet(def.angles);
     const hand = left ? base : mirrorJointSet(base);
     orientJointSet(hand, left ? 'left' : 'right', { fingers: toWorld(def.facing.fingers), palm: toWorld(def.facing.palm) }, anchor, this.pose);
