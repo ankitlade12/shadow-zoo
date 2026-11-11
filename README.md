@@ -111,7 +111,7 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 
 - One art direction throughout: warm candlelight, soft shadows, cream type, and the same lantern glow from the landing page to the finale.
 - Sound is synthesized and placed in space: crickets from the wall, a voice for each creature, chirps for fireflies.
-- The demo video is real gameplay with captions and an original score.
+- The demo video is real gameplay with captions.
 
 ## What's real and what's emulated
 
@@ -145,14 +145,13 @@ npm run build        # static site in dist/; GitHub Actions deploys main to GitH
 
 `bash scripts/drill.sh` plays a fresh game in the emulator with built-in hand poses and times every creature's match. It needs a headless dev server: `./node_modules/.bin/iwsdk dev up --ai-mode agent --headless`.
 
-**Rebuilding the demo video and screenshots** (ffmpeg, Pillow and numpy required):
+**Rebuilding the demo video and screenshots** (ffmpeg and Pillow required):
 
 ```bash
 ./node_modules/.bin/iwsdk dev up --ai-mode agent --headless --allow-browser-automation --screenshot-width 1280 --screenshot-height 720
 bash scripts/demo.sh                                                  # plays and records the scripted demo
 ./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
 python3 scripts/narrate.py                                           # caption timing, from scripts/narration.json
-python3 scripts/score.py                                             # the original music, timed to the beats
 python3 scripts/encode.py                                            # the captioned video, in docs/video/
 python3 scripts/gallery.py                                           # docs/gallery/, plus thumbnails in docs/
 ```
