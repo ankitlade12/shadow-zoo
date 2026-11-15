@@ -364,7 +364,7 @@ export class ZooWalk {
     if (this.time > 0.35 && this.gate < 1) this.gate = Math.min(1, this.gate + dt / 1.3);
     if (this.gate > 0 && !this.gateHeard) {
       this.gateHeard = true;
-      this.audio.play('travel', [this.layout.gate, 0, 0]);
+      this.audio.play('gate', [this.layout.gate, 0, 0]);
     }
     this.walk(dt);
     let v = this.view();

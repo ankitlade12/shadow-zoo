@@ -61,6 +61,7 @@ The first nine screenshots are taken from the demo video and the last two from t
    - **Grab and throw:** pinch a creature to pick it up. It dangles and protests in its own voice; let go mid-swing and it flies.
    - **Bonk:** swipe fast and your shadow knocks creatures flying. A flying creature knocks the ones it hits, the combos get called out ("Double bonk!", "Zoo-quake!"), and everyone lands dizzy.
    - **Clap:** the whole zoo jumps.
+   - **A zoo day:** once you know the basics, the zoo keeps a timetable like a real one. The keeper rings for feeding time and fireflies shower down for everyone ("Everyone is fed!"), then calls show time, when every creature does its trick to applause. Pet a creature and its name plaque shows its hearts. Every time the lantern lights, or the zoo arrives somewhere new, the zoo's gate swings open on your wall.
 4. **Travel the world.** Pick a zoo on the homepage's globe before you start, or open the Menu and pick World tour: a globe of light and shadow appears on your wall. Spin it with a pinch, and pinch a place to take your zoo there. Every zoo has its own light, weather, night sounds and rules:
    - **The Arctic:** icy blue light and snow. Thrown creatures slide on the ice.
    - **The Sahara:** a deep orange glow and blowing sand. The wind carries everything east.
@@ -85,6 +86,7 @@ The first nine screenshots are taken from the demo video and the last two from t
 | Chaos | After the first-time tutorial, a pinch on a creature picks it up and letting go throws it with your fingertip's speed. A fast hand shadow knocks creatures flying, and a flying creature passes part of its speed to the ones it hits, so pile-ups always settle. Creatures tumble under gravity, bounce off the edge of the light and land dizzy. A clap (palms meeting right after being apart) makes everyone jump. | [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [interact.ts](src/core/interact.ts) |
 | Homepage | A night atlas of the world's shadow zoos, built on the same Natural Earth globe and spun by mouse, touch or keyboard. Picking a zoo turns the globe to it, and its legend plays the zoo's rule live with the game's own physics and weather; the game then starts in that zoo. The passport shows the stamps saved in this browser. | [atlas.ts](src/ui/atlas.ts), [landing.ts](src/ui/landing.ts) |
 | Zoo walk | Walking into a zoo on the page: a 2D night zoo along a wall, each enclosure running the game's own `Zoo` (feeding, petting, grabbing, throwing, chain bonks) under the place's rules. A hand shadow cast from the game's open-hand pose follows the mouse or a finger, so the game's interactions work unchanged; the creatures, fireflies and particles are drawn as the game draws them. | [ZooWalk.ts](src/ui/zoowalk/ZooWalk.ts), [hand.ts](src/ui/zoowalk/hand.ts), [scenery.ts](src/ui/zoowalk/scenery.ts) |
+| Zoo day | The lantern lights on the zoo's gate, drawn in shadow on the wall with lanterns on its pillars, its doors swinging open (and again on every arrival somewhere new). A timetable alternates feeding time and show time; its clock runs only while the zoo is free (tutorial done, creatures to play with, nothing announced or held), so a moment never interrupts. | [ZooDay.ts](src/game/ZooDay.ts), [Session.ts](src/game/Session.ts), [GameSystem.ts](src/systems/GameSystem.ts) |
 | Progress | Guided first visitors, stars, the zoo row, the finale, the streak and daily twists, saved to the device. | [Progression.ts](src/game/Progression.ts), [rewards.ts](src/game/rewards.ts), [daily.ts](src/core/daily.ts), [save.ts](src/core/save.ts), [Session.ts](src/game/Session.ts) |
 | Teaching | Short captions and a glowing ghost hand that demonstrates each shape, including both hands for the bird. | [Onboarding.ts](src/game/Onboarding.ts), [GhostHand.ts](src/render/GhostHand.ts) |
 | Menu | A chip on the wall opens a panel near you: assist level, hand, sound, reduced motion, a narrow view for Meta VR Glasses, Re-light and Reset. It's operated by pointing and pinching. | [MenuSystem.ts](src/systems/MenuSystem.ts), [menu.uikitml](public/ui/menu.uikitml), [Settings.ts](src/game/Settings.ts) |
@@ -131,7 +133,7 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 - WebXR hand tracking (all 25 joints, with radii) and plane detection through the Immersive Web SDK, with semantic wall labels when available.
 - It's built to hold up in rooms we never tested: it prefers real walls by size and label, ignores pictures and windows, and falls back to a paper screen.
 - It's light enough for standalone hardware: one instanced mask pass of at most 1,024 capsules, one composite quad, one 64-point dust draw, and no image or audio files for the game to load.
-- There are 254 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
+- There are 264 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
 
 ### Polish and presentation
 
@@ -164,7 +166,7 @@ Requires Node 20.19+, 22.12+ or 24+.
 ```bash
 npm install
 npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
-npm test             # 254 tests (Vitest)
+npm test             # 264 tests (Vitest)
 npm run typecheck
 npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
 ```

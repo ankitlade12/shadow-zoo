@@ -11,12 +11,29 @@ import type { HandShadow } from './hands.js';
 import { captionFor, Onboarding, showGhost, type CaptionInput, type Step } from './Onboarding.js';
 import { Progression, type VisitorPlan } from './Progression.js';
 import { Puppeteer, type Worn } from './Puppeteer.js';
-import { CHAOS_TIPS, comboMessage, passportMessage, revealMessage, TOUR_TIP, zooComplete } from './rewards.js';
+import {
+  ALL_FED,
+  CHAOS_TIPS,
+  comboMessage,
+  FEEDING_CALL,
+  passportMessage,
+  plaqueMessage,
+  revealMessage,
+  SHOW_CALL,
+  TOUR_TIP,
+  welcomeMessage,
+  zooComplete,
+} from './rewards.js';
 import { Tour } from './Tour.js';
 import { Visitors } from './Visitors.js';
 import { Zoo } from './Zoo.js';
+import { ZooDay } from './ZooDay.js';
 
 const WELCOME_SECONDS = 4;
+/** How long the zoo's gate takes to swing open and fade as the lantern lights (or the zoo arrives somewhere). */
+const GATE_SECONDS = 2.6;
+/** Feeding time quietly ends if not everyone has eaten by then. */
+const FEEDING_PATIENCE = 30;
 /** Seconds an onboarding step may hold back the next visitor. */
 const ONBOARDING_PATIENCE = 20;
 /** A "big" visitor needs a shadow this much larger than the usual size. */
@@ -39,6 +56,8 @@ export interface SessionView {
   worn: Worn | null;
   /** The World Tour's globe is open on the wall (the zoo waits meanwhile). */
   tour: boolean;
+  /** The zoo's gate swinging open on the wall: 0 to 1 while it plays, null otherwise. */
+  gate: number | null;
 }
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
@@ -53,7 +72,7 @@ export class Session {
   readonly greeting: Greeting;
   readonly tour = new Tour();
   private readonly puppeteer: Puppeteer;
-  private readonly view: SessionView = { caption: null, ghost: null, worn: null, tour: false };
+  private readonly view: SessionView = { caption: null, ghost: null, worn: null, tour: false, gate: null };
   private readonly input: Mutable<CaptionInput>;
   private readonly handSets: Record<HandPreference, HandShadow[]> = { auto: [], left: [], right: [] };
   private plan: VisitorPlan | null = null;
@@ -74,6 +93,14 @@ export class Session {
   private lastStep: Step;
   /** The zoo the homepage chose, travelled to once the game runs on the wall. */
   private startPlace: PlaceId | null = null;
+  /** The zoo's day: feeding time and show time, in turn. */
+  private readonly day = new ZooDay();
+  /** Seconds left of the gate on the wall, and whether the first light's welcome has been given. */
+  private gateLeft = 0;
+  private welcomed = true;
+  /** The creatures fed since the keeper called feeding time (null outside feeding time), and its patience. */
+  private feeding: Set<CreatureId> | null = null;
+  private feedingLeft = 0;
 
   constructor(
     private readonly shapes: ReadonlyMap<CreatureId, CreatureShape>,
@@ -115,6 +142,9 @@ export class Session {
     this.magnification = magnification;
     if (this.restored) return;
     this.restored = true;
+    // The lantern lights on the zoo's gate swinging open.
+    this.gateLeft = GATE_SECONDS;
+    this.welcomed = false;
     const data = this.saves.data;
     const n = data.unlocked.length;
     data.unlocked.forEach((species, i) => {
@@ -135,10 +165,24 @@ export class Session {
   }
 
   update(dt: number, hands: readonly HandShadow[], projector: ShadowProjector, pool: Pool, events: GameEvent[]): SessionView {
+    let travelled = false;
     if (this.startPlace) {
-      if (this.startPlace !== this.saves.data.place) this.travel(this.startPlace, events);
+      if (this.startPlace !== this.saves.data.place) {
+        this.travel(this.startPlace, events);
+        travelled = true;
+      }
       this.startPlace = null;
     }
+    // The first light's welcome; a trip on the first frame has its own arrival and fanfare instead.
+    if (!this.welcomed) {
+      this.welcomed = true;
+      if (!travelled) {
+        events.push({ type: 'gate', place: this.saves.data.place, x: 0, y: 0 });
+        // A returning player's first night back opens on their welcome back and its streak instead.
+        if (this.welcome <= 0) this.say(welcomeMessage(this.saves.data.place), NEWS, GATE_SECONDS);
+      }
+    }
+    this.gateLeft = Math.max(0, this.gateLeft - dt);
     const active = this.activeHands(hands);
     this.progression.tick(dt);
     this.updateTimers(dt, active);
@@ -152,6 +196,7 @@ export class Session {
     this.zoo.clapReady = !(this.visitors.current?.def.pair ?? false);
     this.zoo.update(dt, pool, active, worn, events);
     this.afterZoo(events, before);
+    this.zooDay(dt, pool, events);
     this.nextTip(dt);
     const input = this.input;
     input.step = this.onboarding.step;
@@ -168,7 +213,41 @@ export class Session {
     this.view.ghost = showGhost(input) ? input.visitor : null;
     this.view.worn = worn;
     this.view.tour = false;
+    this.view.gate = this.gateProgress();
     return this.view;
+  }
+
+  private gateProgress(): number | null {
+    return this.gateLeft > 0 ? 1 - this.gateLeft / GATE_SECONDS : null;
+  }
+
+  /**
+   * The keeper's timetable: feeding time showers fireflies for everyone, show time has every creature do
+   * its trick. Its clock runs only while the zoo is free for it: tutorial done, creatures to play with,
+   * nothing being announced and nothing held.
+   */
+  private zooDay(dt: number, pool: Pool, events: GameEvent[]): void {
+    const ready =
+      this.onboarding.step === 'done' &&
+      this.zoo.creatures.length >= 2 &&
+      this.announceLeft <= 0 &&
+      this.gateLeft <= 0 &&
+      !this.zoo.holding('left') &&
+      !this.zoo.holding('right');
+    const moment = this.day.update(dt, ready);
+    if (moment === 'feeding') {
+      this.zoo.feedingTime(pool, events);
+      this.say(FEEDING_CALL, NEWS, 2.5);
+      this.feeding = new Set();
+      this.feedingLeft = FEEDING_PATIENCE;
+    } else if (moment === 'show') {
+      this.zoo.showTime(pool, events);
+      this.say(SHOW_CALL, NEWS, 3);
+    }
+    if (this.feeding) {
+      this.feedingLeft -= dt;
+      if (this.feedingLeft <= 0) this.feeding = null;
+    }
   }
 
   /** Opens the World Tour's globe on the wall, turned toward where the zoo is now. */
@@ -190,6 +269,7 @@ export class Session {
     view.ghost = null;
     view.worn = null;
     view.tour = this.tour.open;
+    view.gate = this.tour.open ? null : this.gateProgress();
     return view;
   }
 
@@ -198,6 +278,8 @@ export class Session {
     const data = this.saves.data;
     const place = placeOf(id);
     this.tour.hide();
+    // The new zoo's gate swings open as the zoo arrives.
+    this.gateLeft = GATE_SECONDS;
     data.place = id;
     this.zoo.rules = place.rules;
     events.push({ type: 'travel', place: id, x: 0, y: 0 });
@@ -232,7 +314,8 @@ export class Session {
   }
 
   private schedule(): void {
-    if (this.visitors.busy || this.welcome > 0) return;
+    // The first visitor waits for the gate to open.
+    if (this.visitors.busy || this.welcome > 0 || this.gateLeft > 0) return;
     const step = this.onboarding.step;
     if ((step === 'feed' || step === 'pet') && this.stepTime < ONBOARDING_PATIENCE) return;
     const plan = this.progression.nextVisitor();
@@ -289,6 +372,15 @@ export class Session {
     this.tipWait = TIP_GAP;
   }
 
+  /** During feeding time, counts who has eaten; once everyone has, the keeper says so. */
+  private onFed(species: CreatureId): void {
+    if (!this.feeding) return;
+    this.feeding.add(species);
+    if (!this.zoo.creatures.every((c) => this.feeding!.has(c.species))) return;
+    this.feeding = null;
+    this.say(ALL_FED, NEWS, 2.5);
+  }
+
   private afterZoo(events: readonly GameEvent[], from: number): void {
     let changed = false;
     for (let i = from; i < events.length; i++) {
@@ -299,9 +391,13 @@ export class Session {
         this.progression.onEat();
         this.onboarding.onEat();
         changed = true;
+        this.onFed(e.species);
       } else if (e.type === 'pet') {
         this.onboarding.onPet();
         changed = true;
+        // A petted creature's name plaque: its name, and the hearts it has for you.
+        const pet = this.zoo.creatures.find((c) => c.species === e.species);
+        this.say(plaqueMessage(this.shapes.get(e.species)!.def.name, pet?.bond ?? 1), CALLOUT, 1.8);
       }
     }
     if (!changed) return;

@@ -33,5 +33,11 @@ export function soundFor(event: GameEvent): SoundName {
       return 'travel';
     case 'stamp':
       return 'stamp';
+    case 'gate':
+      return 'gate';
+    case 'feeding':
+      return 'bell';
+    case 'show':
+      return 'applause';
   }
 }

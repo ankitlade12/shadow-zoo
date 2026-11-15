@@ -24,7 +24,13 @@ export type GameEvent =
   /** The zoo traveled to a place. */
   | { readonly type: 'travel'; readonly place: PlaceId; readonly x: number; readonly y: number }
   /** A first visit earned a passport stamp. */
-  | { readonly type: 'stamp'; readonly place: PlaceId; readonly x: number; readonly y: number };
+  | { readonly type: 'stamp'; readonly place: PlaceId; readonly x: number; readonly y: number }
+  /** The zoo's gate swung open on the wall as the lantern lit. */
+  | { readonly type: 'gate'; readonly place: PlaceId; readonly x: number; readonly y: number }
+  /** The keeper called feeding time: fireflies for everyone. */
+  | { readonly type: 'feeding'; readonly x: number; readonly y: number }
+  /** The keeper called show time: every creature does its trick. */
+  | { readonly type: 'show'; readonly x: number; readonly y: number };
 
 /** A visitor that matched: where its shadow was and how big. */
 export interface Revealed {

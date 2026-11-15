@@ -116,6 +116,7 @@ export class GameSystem extends createSystem({}) {
       this.drawHands(canvas, view.worn);
       this.drawVisitor(canvas);
       this.drawZoo(canvas, stage);
+      if (view.gate !== null) this.drawGate(canvas, view.gate);
       this.drawWeather(canvas, place);
       this.drawEmbers(canvas, stage);
     }
@@ -326,6 +327,52 @@ export class GameSystem extends createSystem({}) {
       const x = Math.cos(theta) * stage.poolU * 0.9;
       const y = Math.sin(theta) * stage.poolV * 0.9;
       canvas.addDot(x, y, 0.0028 * this.magnification, CH_GLOW, 0.75 + 0.25 * Math.sin(this.time * 2 + i));
+    }
+  }
+
+  /**
+   * The zoo's gate as the lantern lights (or the zoo arrives somewhere new): two pillars with lanterns,
+   * an arch, and barred doors that swing open toward you, then the whole gate fades into the zoo.
+   */
+  private drawGate(canvas: ShadowCanvas, k: number): void {
+    const { u, v } = this.pool;
+    const fade = k < 0.72 ? 1 : Math.max(0, 1 - (k - 0.72) / 0.28);
+    const open = Math.min(1, Math.max(0, (k - 0.1) / 0.5));
+    const swing = 1 - (1 - open) ** 3;
+    const ink = 0.92 * fade;
+    const px = 0.8 * u;
+    const post = 0.034 * v;
+    const bottom = -1.02 * v;
+    const top = 0.6 * v;
+    const crown = 0.88 * v;
+    for (const side of [-1, 1]) {
+      canvas.addCapsule(side * px, bottom, post, side * px, top, post, CH_SHADOW, ink);
+      canvas.addCapsule(side * px - post * 1.4, top, post * 0.5, side * px + post * 1.4, top, post * 0.5, CH_SHADOW, ink);
+      canvas.addDot(side * px, top + 0.07 * v, 0.026 * v, CH_GLOW, fade);
+      canvas.addDot(side * px, top + 0.07 * v, 0.08 * v, CH_GLOW, 0.25 * fade);
+    }
+    // The arch between the pillars.
+    const segments = 14;
+    for (let i = 0; i < segments; i++) {
+      const a = i / segments;
+      const b = (i + 1) / segments;
+      const ya = top + (crown - top) * Math.sin(Math.PI * a);
+      const yb = top + (crown - top) * Math.sin(Math.PI * b);
+      canvas.addCapsule(-px + 2 * px * a, ya, 0.016 * v, -px + 2 * px * b, yb, 0.016 * v, CH_SHADOW, ink);
+    }
+    // The doors narrow as they turn on their hinges toward you.
+    const leaf = (px - post) * Math.cos((swing * Math.PI) / 2);
+    if (leaf < 0.01 * u) return;
+    const doorTop = 0.4 * v;
+    for (const side of [-1, 1]) {
+      const hinge = side * (px - post);
+      const edge = hinge - side * leaf;
+      canvas.addCapsule(hinge, doorTop, 0.011 * v, edge, doorTop, 0.011 * v, CH_SHADOW, ink);
+      canvas.addCapsule(hinge, -0.15 * v, 0.009 * v, edge, -0.15 * v, 0.009 * v, CH_SHADOW, ink);
+      for (let j = 0; j <= 5; j++) {
+        const x = hinge - side * leaf * (j / 5);
+        canvas.addCapsule(x, doorTop, 0.0075 * v, x, bottom, 0.0075 * v, CH_SHADOW, ink);
+      }
     }
   }
 

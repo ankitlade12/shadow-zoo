@@ -1,6 +1,6 @@
 import { CREATURES } from '../core/library.js';
 import type { SaveData } from '../core/save.js';
-import { PLACES } from '../core/world.js';
+import { PLACES, type PlaceId } from '../core/world.js';
 
 /** The places a passport can be stamped for: everywhere but home. */
 export const STAMPABLE = PLACES.length - 1;
@@ -45,3 +45,24 @@ export function zooProgress(save: SaveData): string {
   const places = save.stamps.length;
   return places > 0 ? `${line}, ${places} of ${STAMPABLE} places` : line;
 }
+
+/** Each zoo's name on its gate: what the wall says as the lantern lights there. */
+const ZOO_NAME: Readonly<Record<PlaceId, string>> = {
+  home: 'Shadow Zoo',
+  arctic: 'the Arctic Shadow Zoo',
+  sahara: 'the Sahara Shadow Zoo',
+  amazon: 'the Amazon Shadow Zoo',
+  outback: 'the Outback Shadow Zoo',
+  moon: 'the Shadow Zoo on the Moon',
+};
+
+/** The welcome as the gate swings open. */
+export const welcomeMessage = (place: PlaceId): string => `Welcome to ${ZOO_NAME[place]}`;
+
+/** The keeper's calls in a zoo day. */
+export const FEEDING_CALL = 'Feeding time!';
+export const ALL_FED = 'Everyone is fed!';
+export const SHOW_CALL = 'Show time! Every creature does a trick';
+
+/** A petted creature's name plaque: its name and its hearts. */
+export const plaqueMessage = (name: string, hearts: number): string => `${name} ${'♥'.repeat(Math.max(1, Math.min(5, hearts)))}`;

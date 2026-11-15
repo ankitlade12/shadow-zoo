@@ -15,6 +15,9 @@ export type SoundName =
   | 'globe'
   | 'travel'
   | 'stamp'
+  | 'gate'
+  | 'bell'
+  | 'applause'
   | `bonk-${BonkLevel}`
   | `voice-${CreatureId}`;
 
@@ -125,6 +128,24 @@ export function playRecipe(name: SoundName, ctx: AudioContext, out: AudioNode, t
       noise(ctx, out, t, buffer, { dur: 0.04, gain: 0.18, filter: 'lowpass', freq: 900 });
       tone(ctx, out, t, { type: 'sine', f0: 1568, f1: 1568, dur: 0.9, gain: 0.1, delay: 0.06 });
       tone(ctx, out, t, { type: 'sine', f0: 2350, f1: 2350, dur: 0.5, gain: 0.05, delay: 0.06 });
+      break;
+    case 'gate':
+      // The zoo's gate: a slow wooden creak as the doors swing, then a welcoming chime.
+      noise(ctx, out, t, buffer, { dur: 0.9, gain: 0.07, filter: 'bandpass', freq: 220, freq1: 520, q: 6 });
+      [784, 988, 1175].forEach((f, k) => tone(ctx, out, t, { type: 'sine', f0: f, f1: f, dur: 0.8, gain: 0.08, delay: 0.55 + k * 0.12, attack: 0.02 }));
+      break;
+    case 'bell':
+      // The keeper's hand bell for feeding time: three bright strikes with a ringing overtone.
+      for (let k = 0; k < 3; k++) {
+        tone(ctx, out, t, { type: 'sine', f0: 1320, f1: 1310, dur: 0.6, gain: 0.12, delay: k * 0.22, attack: 0.004 });
+        tone(ctx, out, t, { type: 'sine', f0: 3300, f1: 3280, dur: 0.3, gain: 0.04, delay: k * 0.22, attack: 0.004 });
+      }
+      break;
+    case 'applause':
+      // A small crowd clapping for the show.
+      for (let k = 0; k < 18; k++) {
+        noise(ctx, out, t, buffer, { dur: 0.05, gain: 0.07 + 0.05 * Math.random(), filter: 'bandpass', freq: 1400 + Math.random() * 1600, q: 0.8, delay: k * 0.07 + Math.random() * 0.05 });
+      }
       break;
     case 'bonk-1':
     case 'bonk-2':

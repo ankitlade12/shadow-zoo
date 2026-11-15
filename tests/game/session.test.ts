@@ -11,6 +11,7 @@ import { createJointSet } from '../../src/core/poses.js';
 import { CHAOS_TIPS } from '../../src/game/rewards.js';
 import { placeOf, type PlaceId } from '../../src/core/world.js';
 import { Session } from '../../src/game/Session.js';
+import { BETWEEN_MOMENTS, FIRST_MOMENT } from '../../src/game/ZooDay.js';
 
 const sil = new Silhouettes();
 const shapes = buildCreatureShapes(sil);
@@ -55,7 +56,10 @@ describe('Session', () => {
     const storage = new MemoryStorage();
     const session = new Session(shapes, sil, storage, at('2026-11-10'), mulberry32(1));
     session.onStage(pool, 1);
-    let view = run(session, 1.5, [hand(null)]);
+    // The lantern lights on the zoo's gate; the rabbit visits once it has opened.
+    expect(run(session, 1, [hand('dog')]).caption).toBe('Welcome to Shadow Zoo');
+    expect(session.visitors.current).toBeNull();
+    let view = run(session, 3, [hand('dog')]);
     expect(session.visitors.current?.def.id).toBe('rabbit');
     expect(view.caption).toBe('Make a rabbit with your hand');
     expect(view.ghost).toBe('rabbit');
@@ -154,7 +158,8 @@ describe('Session chaos', () => {
 
   it('teaches a returning player to grab, then to swipe and clap, one tip at a time', () => {
     const session = returning();
-    expect(run(session, 3, [hand(null)]).caption).toBe(CHAOS_TIPS[0]);
+    // The first tip follows the gate's welcome.
+    expect(run(session, 5, [hand(null)]).caption).toBe(CHAOS_TIPS[0]);
     expect(session.zoo.chaos).toBe(true);
     expect(run(session, 17, [hand(null)]).caption).toBe(CHAOS_TIPS[1]);
   });
@@ -172,6 +177,8 @@ describe('Session chaos', () => {
       right.joints!.pos[J.middleProx * 3] = gap / 2;
     };
     const events: GameEvent[] = [];
+    // After the gate's welcome, which outranks a callout.
+    run(session, 3, [hand(null)]);
     gapOf(0.3);
     session.update(1 / 30, [left, right], projector, pool, events);
     gapOf(0.05);
@@ -281,5 +288,87 @@ describe('Session World Tour', () => {
     session.startAt('amazon');
     expect(run(session, 0.5, [hand('dog')]).caption).toBe(placeOf('amazon').arrival);
     expect(run(session, 7, [hand('dog')]).caption).toBe('Make a rabbit with your hand');
+  });
+});
+
+describe('Session zoo day', () => {
+  const returning = (unlocked: CreatureId[] = ['rabbit', 'dog']) => {
+    const save = freshSave();
+    save.unlocked = unlocked;
+    save.streak = 1;
+    save.lastDay = '2026-11-10';
+    const session = new Session(shapes, sil, withSave(save), at('2026-11-10'), mulberry32(6));
+    session.onStage(pool, 1);
+    return session;
+  };
+  /** Every line the wall shows while the session runs, in order. */
+  const watch = (session: Session, seconds: number, hands: HandShadow[], events: GameEvent[]) => {
+    const seen: string[] = [];
+    for (let t = 0; t < seconds; t += 1 / 30) {
+      const caption = session.update(1 / 30, hands, projector, pool, events).caption;
+      if (caption && seen.at(-1) !== caption) seen.push(caption);
+    }
+    return seen;
+  };
+
+  it("the lantern lights on the zoo's gate swinging open, with a welcome", () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    const first = session.update(1 / 30, [hand(null)], projector, pool, events);
+    expect(first.gate).toBeGreaterThanOrEqual(0);
+    expect(first.gate).toBeLessThan(0.1);
+    expect(first.caption).toBe('Welcome to Shadow Zoo');
+    expect(events.filter((e) => e.type === 'gate')).toHaveLength(1);
+    const opening = run(session, 1.2, [hand(null)], events).gate;
+    expect(opening).toBeGreaterThan(0.3);
+    expect(run(session, 3, [hand(null)], events).gate).toBeNull();
+    expect(events.filter((e) => e.type === 'gate')).toHaveLength(1);
+  });
+
+  it("traveling opens the new zoo's gate to its own fanfare", () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    run(session, 4, [hand(null)], events);
+    events.length = 0;
+    session.startAt('arctic');
+    const view = session.update(1 / 30, [hand(null)], projector, pool, events);
+    expect(view.gate).not.toBeNull();
+    expect(view.caption).toBe(placeOf('arctic').arrival);
+    expect(events.some((e) => e.type === 'travel')).toBe(true);
+    expect(events.some((e) => e.type === 'gate')).toBe(false);
+  });
+
+  it('after the tutorial, feeding time comes round: fireflies shower and everyone eats', () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    const seen = watch(session, FIRST_MOMENT + 45, [hand(null)], events);
+    expect(events.filter((e) => e.type === 'feeding')).toHaveLength(1);
+    expect(seen).toContain('Feeding time!');
+    expect(seen.indexOf('Everyone is fed!')).toBeGreaterThan(seen.indexOf('Feeding time!'));
+  });
+
+  it('show time follows: every creature does a trick', () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    const seen = watch(session, FIRST_MOMENT + BETWEEN_MOMENTS + 60, [hand(null)], events);
+    expect(events.filter((e) => e.type === 'show').length).toBeGreaterThanOrEqual(1);
+    expect(seen).toContain('Show time! Every creature does a trick');
+  });
+
+  it('petting a creature puts its name on the wall, with its hearts', () => {
+    const session = returning(['rabbit']);
+    run(session, 43, [hand(null)]);
+    const rabbit = session.zoo.creatures[0];
+    const petter = createHandShadow('left');
+    petter.tracked = true;
+    petter.count = 1;
+    const seen: string[] = [];
+    for (let t = 0; t < 2; t += 1 / 30) {
+      const y = rabbit.y + rabbit.lift;
+      petter.caps.set([rabbit.x - 0.02, y, 0.03, rabbit.x + 0.02, y, 0.03]);
+      const caption = session.update(1 / 30, [petter], projector, pool, []).caption;
+      if (caption && seen.at(-1) !== caption) seen.push(caption);
+    }
+    expect(seen).toContain('Rabbit ♥');
   });
 });

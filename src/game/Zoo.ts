@@ -106,6 +106,28 @@ export class Zoo {
     events.push({ type: 'reveal', species, x, y });
   }
 
+  /** Feeding time: the keeper scatters fireflies across the light, one for every creature and one more. */
+  feedingTime(pool: Pool, events: GameEvent[]): void {
+    const n = Math.max(3, this.creatures.length + 1);
+    for (let i = 0; i < n; i++) {
+      const x = ((i + 0.5) / n - 0.5) * 1.5 * pool.u;
+      const y = (0.42 + 0.16 * this.rng()) * pool.v;
+      const firefly = this.fireflies.spawn(x, y, pool, this.rng);
+      if (!firefly) break;
+      this.particles.emit(SPARK, firefly.x, firefly.y, 4, 0.1, this.rng);
+    }
+    events.push({ type: 'feeding', x: 0, y: 0.5 * pool.v });
+  }
+
+  /** Show time: every creature does its trick, under a few stars. */
+  showTime(pool: Pool, events: GameEvent[]): void {
+    for (const c of this.creatures) {
+      c.celebrate();
+      this.particles.emit(STAR, c.x, c.y + c.size * 0.5, 3, c.size * 0.4, this.rng);
+    }
+    events.push({ type: 'show', x: 0, y: 0.2 * pool.v });
+  }
+
   /** Star sparkles for a matched visitor: more stars, more sparkle. */
   celebrate(x: number, y: number, stars: number, size: number): void {
     this.particles.emit(SPARK, x, y, stars * 5, size * 0.7, this.rng);
