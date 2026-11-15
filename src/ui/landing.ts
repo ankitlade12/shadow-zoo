@@ -43,34 +43,56 @@ const canOpenCamera = (): boolean => typeof navigator.mediaDevices?.getUserMedia
 let zoo: PlaceId = 'home';
 let cameraFirst = false;
 
-/** The chosen zoo's seal for the start plaque: its glyph, taken from its cartouche on the atlas. */
-function seal(): HTMLSpanElement {
+/** A zoo's seal for a start plaque: its glyph, taken from its cartouche on the atlas. */
+function seal(place: PlaceId): HTMLSpanElement {
   const mark = document.createElement('span');
   mark.className = 'seal';
   mark.setAttribute('aria-hidden', 'true');
-  const glyph = document.querySelector(`label.zoo[data-place="${zoo}"] svg`);
+  const glyph = document.querySelector(`label.zoo[data-place="${place}"] svg`);
   if (glyph) mark.append(glyph.cloneNode(true));
   return mark;
+}
+
+const lightIn = (place: PlaceId): HTMLSpanElement => {
+  const text = document.createElement('span');
+  text.textContent = `Light the lantern ${PLACE_PHRASE[place]}`;
+  return text;
+};
+
+/** Labels a plaque "Light the lantern in <zoo>", sealed with the zoo's glyph. */
+export function labelPlaque(button: HTMLButtonElement, place: PlaceId): void {
+  button.replaceChildren(seal(place), lightIn(place));
 }
 
 /** Names the chosen zoo on the start buttons, sealed with its glyph. */
 function label(): void {
   const { start, startCamera } = elements();
-  const light = (): HTMLSpanElement => {
-    const text = document.createElement('span');
-    text.textContent = `Light the lantern ${PLACE_PHRASE[zoo]}`;
-    return text;
-  };
   if (startCamera) {
     const how = document.createElement('small');
     how.textContent = 'with my real hands, through the camera';
     // The space keeps the two lines apart in the button's accessible name.
-    startCamera.replaceChildren(seal(), light(), ' ', how);
+    startCamera.replaceChildren(seal(zoo), lightIn(zoo), ' ', how);
   }
   if (!start) return;
   if (cameraFirst) start.textContent = 'or play with the mouse';
-  else start.replaceChildren(seal(), light());
+  else labelPlaque(start, zoo);
 }
+
+/**
+ * Starts the game in a zoo from elsewhere on the page (the zoo walk's lantern house), the way the
+ * homepage's own start does: real hands first where a camera leads. False when this browser can't start.
+ */
+export function startGame(place: PlaceId): boolean {
+  setLandingZoo(place);
+  const { start, startCamera } = elements();
+  const primary = startCamera && !startCamera.hidden ? startCamera : start;
+  if (!primary || primary.disabled || getComputedStyle(primary).display === 'none') return false;
+  primary.click();
+  return true;
+}
+
+/** What the homepage says about playing in this browser. */
+export const startNote = (): string => elements().support?.textContent ?? '';
 
 /** The zoo chosen on the atlas: the game starts there. */
 export function setLandingZoo(id: PlaceId): void {

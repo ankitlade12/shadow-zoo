@@ -1,44 +1,9 @@
 import { createSystem, Quaternion, Vector3 } from '@iwsdk/core';
 import { AudioEngine } from '../audio/AudioEngine.js';
-import type { BonkLevel, SoundName } from '../audio/recipes.js';
+import { soundFor } from '../audio/events.js';
 import type { Stage } from '../core/stage.js';
 import type { Vec3 } from '../core/vec.js';
-import type { GameEvent } from '../game/events.js';
 import { store } from '../runtime/store.js';
-
-function soundFor(event: GameEvent): SoundName {
-  switch (event.type) {
-    case 'voice':
-      return `voice-${event.species}`;
-    case 'reveal':
-      return 'reveal';
-    case 'eat':
-      return 'eat';
-    case 'pet':
-      return 'pet';
-    case 'flee':
-      return 'flee';
-    case 'firefly':
-      return 'firefly';
-    // A grabbed creature protests in its own voice.
-    case 'grab':
-      return `voice-${event.species}`;
-    case 'fling':
-      return 'whoosh';
-    case 'bonk':
-      return `bonk-${Math.min(5, Math.max(1, event.combo)) as BonkLevel}`;
-    case 'land':
-      return 'thud';
-    case 'clap':
-      return 'clap';
-    case 'globe':
-      return 'globe';
-    case 'travel':
-      return 'travel';
-    case 'stamp':
-      return 'stamp';
-  }
-}
 
 const fmt = (v: Vec3): string => v.map((n) => n.toFixed(2)).join(' ');
 

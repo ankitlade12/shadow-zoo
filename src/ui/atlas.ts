@@ -7,6 +7,7 @@ import { parseSave, SAVE_KEY, type SaveData } from '../core/save.js';
 import { WeatherField } from '../core/weather.js';
 import { GLOBE_DOTS, markerAt, PLACE_IDS, placeMarkers, placeOf, projectGlobe, yawFacing, type GlobeView, type Marker, type PlaceId, type Projected } from '../core/world.js';
 import { STAMPABLE } from '../game/rewards.js';
+import { WALK_NAMES } from './zoowalk/ZooWalk.js';
 
 /** Each zoo's wash on the night atlas; the chosen zoo's is the page's one accent. */
 export const ZOO_WASH: Readonly<Record<PlaceId, string>> = {
@@ -19,17 +20,16 @@ export const ZOO_WASH: Readonly<Record<PlaceId, string>> = {
 };
 
 /** Each zoo's legend: its light and weather, and the rule its live demo plays out. */
-export const ZOO_LEGEND: Readonly<Record<PlaceId, { readonly scene: string; readonly rule: string; readonly hint: string }>> = {
+export const ZOO_LEGEND: Readonly<Record<PlaceId, { readonly scene: string; readonly rule: string }>> = {
   home: {
     scene: 'Your own wall in warm lantern light.',
     rule: 'Toss a creature and it tumbles, bounces and lands dizzy.',
-    hint: 'Tap the wall to toss the rabbit.',
   },
-  arctic: { scene: 'Icy blue light and falling snow.', rule: 'On the ice, a thrown creature slides.', hint: 'Tap the wall to toss the rabbit.' },
-  sahara: { scene: 'A deep orange glow and blowing sand.', rule: 'The wind carries everything east.', hint: 'Tap the wall to toss the rabbit.' },
-  amazon: { scene: 'Green light and rain.', rule: 'Every pinch releases a swarm of fireflies.', hint: 'Tap the wall to release a swarm.' },
-  outback: { scene: 'Red dusk.', rule: 'Everything bounces sky-high.', hint: 'Tap the wall to toss the rabbit.' },
-  moon: { scene: 'Silver light and drifting dust.', rule: 'Low gravity: throw a creature and watch it float.', hint: 'Tap the wall to toss the rabbit.' },
+  arctic: { scene: 'Icy blue light and falling snow.', rule: 'On the ice, a thrown creature slides.' },
+  sahara: { scene: 'A deep orange glow and blowing sand.', rule: 'The wind carries everything east.' },
+  amazon: { scene: 'Green light and rain.', rule: 'Every pinch releases a swarm of fireflies.' },
+  outback: { scene: 'Red dusk.', rule: 'Everything bounces sky-high.' },
+  moon: { scene: 'Silver light and drifting dust.', rule: 'Low gravity: throw a creature and watch it float.' },
 };
 
 /**
@@ -706,6 +706,8 @@ class LegendWall {
 export interface Atlas {
   /** The zoo chosen on the atlas. */
   chosen(): PlaceId;
+  /** Chooses a zoo on the atlas, at once (a zoo walked into from a link). */
+  choose(id: PlaceId): void;
   /** Reads the save again after a game: where the zoo is now, and the passport's stamps. */
   refresh(): void;
 }
@@ -714,7 +716,7 @@ export interface Atlas {
  * Mounts the homepage atlas: the globe, the zoo cartouches, the chosen zoo's legend, the hand-shadow key
  * and the passport. It animates only while the homepage shows and the globe is on screen.
  */
-export function mountAtlas(onChange: (id: PlaceId) => void): Atlas | null {
+export function mountAtlas(onChange: (id: PlaceId) => void, onWalk?: (id: PlaceId) => void): Atlas | null {
   const landing = document.getElementById('landing');
   const globeCanvas = document.getElementById('globe');
   const wallCanvas = document.getElementById('legend-wall');
@@ -741,7 +743,7 @@ export function mountAtlas(onChange: (id: PlaceId) => void): Atlas | null {
     text('legend-scene', legend.scene);
     text('legend-rule', legend.rule);
     text('legend-stamp', stampLine(id, save));
-    text('legend-hint', legend.hint);
+    text('walk-in-label', `Walk into ${WALK_NAMES[id].short}`);
     // Screen readers hear a choice as it is made, not the one the page opens with.
     text('legend-live', instant ? '' : `${placeOf(id).name}. ${legend.rule}`);
     wallCanvas.setAttribute('aria-label', `A rabbit's shadow tossed on a wall under the rules of ${id === 'home' ? 'home' : placeOf(id).name.replace(/^The /, 'the ')}.`);
@@ -751,6 +753,7 @@ export function mountAtlas(onChange: (id: PlaceId) => void): Atlas | null {
     onChange(id);
   };
   const globe = new AtlasGlobe(globeCanvas, labelOf, (id) => select(id, false));
+  document.getElementById('walk-in')?.addEventListener('click', () => onWalk?.(chosen));
   const wall = new LegendWall(wallCanvas);
   for (const input of inputs) {
     const id = input.value as PlaceId;
@@ -792,6 +795,7 @@ export function mountAtlas(onChange: (id: PlaceId) => void): Atlas | null {
   requestAnimationFrame(frame);
   return {
     chosen: () => chosen,
+    choose: (id) => select(id, true),
     refresh: () => {
       save = readSave();
       renderPassport(save);

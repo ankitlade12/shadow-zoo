@@ -30,6 +30,10 @@ Shadow puppets are the oldest mixed reality there is: a light, a wall and your h
 
 The homepage is a night atlas: spin the globe, pick a zoo, watch its rule play out live in its legend, and light the lantern there.
 
+![Walking into the Amazon zoo](docs/gallery/13-zoo-walk.png)
+
+Or walk into the zoo right on the page: a night zoo with an enclosure for every creature, where your mouse or finger casts the hand shadow.
+
 | | |
 |---|---|
 | ![Light the lantern](docs/gallery/02-lantern.png) | ![It comes alive](docs/gallery/03-rabbit.png) |
@@ -43,11 +47,12 @@ The homepage is a night atlas: spin the globe, pick a zoo, watch its rule play o
 | ![Travel the world](docs/gallery/10-world-tour.png) | ![Every zoo, its own rules](docs/gallery/11-sahara.png) |
 | World tour: spin the globe on your wall and pinch a place to take your zoo there. | In the Sahara the light turns orange, sand blows and the wind carries everything east. |
 
-The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking. The homepage capture is of this site.
+The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking. The homepage and zoo walk captures are of this site.
 
 ## How it plays
 
 1. **Pick a zoo and light the lantern.** The homepage is a night atlas: spin its globe and pick a zoo, then light the lantern. The game finds the wall you face and lights a warm pool on it, in that zoo's light.
+   - **Or walk in first.** Every zoo on the atlas can be walked into, on any laptop, tablet or phone: a lantern-lit night zoo with a gate, an enclosure for each of the seven creatures and a lantern house at the end. The mouse or a finger casts a hand shadow, so you feed, pet, grab, throw and bonk them under that zoo's rules, run by the game's own zoo logic and physics. Feed and pet everyone to finish the zoo's trail, then light the lantern to take the zoo home. Each zoo has its own link, such as `#walk-moon`.
 2. **Make the shape.** A glowing outline appears. Shape your hand until its shadow fits, and the creature wriggles free. There are seven to discover: rabbit, dog, crocodile, peacock, spider, turtle, and the bird, which takes both hands.
 3. **Play with them.**
    - **Feed:** pinch to release a firefly.
@@ -79,6 +84,7 @@ The first nine screenshots are taken from the demo video and the last two from t
 | World Tour | The globe is drawn on the wall: land as dots of shadow from a 5-degree grid of Natural Earth's coastlines, projected orthographically and tipped toward you. The pinch point (between thumb and index tips) hovers, spins and picks. Each place sets the lantern's color, the weather, the ambience and the physics rules (gravity, bounce, ice, wind and fireflies per pinch). The place and passport stamps are saved. | [world.ts](src/core/world.ts), [Tour.ts](src/game/Tour.ts), [weather.ts](src/core/weather.ts) |
 | Chaos | After the first-time tutorial, a pinch on a creature picks it up and letting go throws it with your fingertip's speed. A fast hand shadow knocks creatures flying, and a flying creature passes part of its speed to the ones it hits, so pile-ups always settle. Creatures tumble under gravity, bounce off the edge of the light and land dizzy. A clap (palms meeting right after being apart) makes everyone jump. | [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [interact.ts](src/core/interact.ts) |
 | Homepage | A night atlas of the world's shadow zoos, built on the same Natural Earth globe and spun by mouse, touch or keyboard. Picking a zoo turns the globe to it, and its legend plays the zoo's rule live with the game's own physics and weather; the game then starts in that zoo. The passport shows the stamps saved in this browser. | [atlas.ts](src/ui/atlas.ts), [landing.ts](src/ui/landing.ts) |
+| Zoo walk | Walking into a zoo on the page: a 2D night zoo along a wall, each enclosure running the game's own `Zoo` (feeding, petting, grabbing, throwing, chain bonks) under the place's rules. A hand shadow cast from the game's open-hand pose follows the mouse or a finger, so the game's interactions work unchanged; the creatures, fireflies and particles are drawn as the game draws them. | [ZooWalk.ts](src/ui/zoowalk/ZooWalk.ts), [hand.ts](src/ui/zoowalk/hand.ts), [scenery.ts](src/ui/zoowalk/scenery.ts) |
 | Progress | Guided first visitors, stars, the zoo row, the finale, the streak and daily twists, saved to the device. | [Progression.ts](src/game/Progression.ts), [rewards.ts](src/game/rewards.ts), [daily.ts](src/core/daily.ts), [save.ts](src/core/save.ts), [Session.ts](src/game/Session.ts) |
 | Teaching | Short captions and a glowing ghost hand that demonstrates each shape, including both hands for the bird. | [Onboarding.ts](src/game/Onboarding.ts), [GhostHand.ts](src/render/GhostHand.ts) |
 | Menu | A chip on the wall opens a panel near you: assist level, hand, sound, reduced motion, a narrow view for Meta VR Glasses, Re-light and Reset. It's operated by pointing and pinching. | [MenuSystem.ts](src/systems/MenuSystem.ts), [menu.uikitml](public/ui/menu.uikitml), [Settings.ts](src/game/Settings.ts) |
@@ -125,7 +131,7 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 - WebXR hand tracking (all 25 joints, with radii) and plane detection through the Immersive Web SDK, with semantic wall labels when available.
 - It's built to hold up in rooms we never tested: it prefers real walls by size and label, ignores pictures and windows, and falls back to a paper screen.
 - It's light enough for standalone hardware: one instanced mask pass of at most 1,024 capsules, one composite quad, one 64-point dust draw, and no image or audio files for the game to load.
-- There are 245 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
+- There are 254 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
 
 ### Polish and presentation
 
@@ -158,7 +164,7 @@ Requires Node 20.19+, 22.12+ or 24+.
 ```bash
 npm install
 npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
-npm test             # 245 tests (Vitest)
+npm test             # 254 tests (Vitest)
 npm run typecheck
 npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
 ```
@@ -188,7 +194,8 @@ src/
   audio/       the Web Audio engine and synthesized sound recipes
   systems/     IWSDK ECS systems: hands, stage, menu, game, render, sound, desktop preview
   preview/     desktop preview: browser check, emulator, mouse controls, camera hands
-  ui/          the homepage: the atlas (globe, zoos, live legends, passport) and the start buttons
+  ui/          the homepage: the atlas (globe, zoos, live legends, passport), the start buttons,
+               and the zoo walk (zoowalk/)
 public/ui/     the menu (UIKitML)
 public/fonts/  the homepage's typefaces and their licenses
 public/plates/ the homepage's screenshots

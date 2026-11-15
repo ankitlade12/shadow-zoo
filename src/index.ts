@@ -11,12 +11,28 @@ import { MenuSystem } from './systems/MenuSystem.js';
 import { PreviewSystem } from './systems/PreviewSystem.js';
 import { RenderSystem } from './systems/RenderSystem.js';
 import { StageSystem } from './systems/StageSystem.js';
-import { mountAtlas } from './ui/atlas.js';
-import { mountLanding, prepareLanding, previewUnavailable, setLandingZoo } from './ui/landing.js';
+import { mountAtlas, type Atlas } from './ui/atlas.js';
+import { labelPlaque, mountLanding, prepareLanding, previewUnavailable, setLandingZoo, startGame, startNote } from './ui/landing.js';
+import { mountZooWalk, walkFromHash, type WalkControls } from './ui/zoowalk/mount.js';
 
 async function main(): Promise<void> {
-  // The atlas works at once, while the world loads: turn the globe, pick a zoo.
-  const atlas = mountAtlas(setLandingZoo);
+  // The atlas and the zoo walk work at once, while the world loads: turn the globe, pick a zoo, walk in.
+  let atlas: Atlas | null = null;
+  const walk: WalkControls | null = mountZooWalk({
+    onOpen: (place) => atlas?.choose(place),
+    onClose: () => document.getElementById('walk-in')?.focus({ preventScroll: true }),
+    onStart: (place) => {
+      const started = startGame(place);
+      if (started) walk?.close();
+      return started;
+    },
+    startNote,
+    label: labelPlaque,
+  });
+  atlas = mountAtlas(setLandingZoo, (place) => walk?.open(place));
+  // A shared #walk-<zoo> link walked straight in: the atlas behind it shows that zoo too.
+  const linked = walkFromHash(location.hash);
+  if (linked) atlas?.choose(linked);
   let mode = await detectXRMode();
   prepareLanding(mode);
   let options: WorldOptions = projectOptions;
