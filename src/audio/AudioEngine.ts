@@ -1,6 +1,31 @@
 import type { Vec3 } from '../core/vec.js';
 import { VoiceLimiter } from '../core/voices.js';
+import type { PlaceId } from '../core/world.js';
 import { playRecipe, type SoundName } from './recipes.js';
+
+/** A place's night sounds: gains for each layer (0 leaves it out), and the insects' pitch and chirp rate. */
+interface Ambience {
+  readonly crickets: number;
+  readonly cricketFreq: number;
+  readonly chirpRate: number;
+  readonly wind: number;
+  readonly windFreq: number;
+  readonly rain: number;
+  readonly hum: number;
+  readonly room: number;
+}
+
+const QUIET = { crickets: 0, cricketFreq: 4400, chirpRate: 19, wind: 0, windFreq: 500, rain: 0, hum: 0, room: 0.02 };
+
+/** Crickets at home, wind on the ice and the sand, rain and frogs in the Amazon, a hush on the Moon. */
+export const AMBIENCE: Readonly<Record<PlaceId, Ambience>> = {
+  home: { ...QUIET, crickets: 0.014, room: 0.025 },
+  arctic: { ...QUIET, wind: 0.03, windFreq: 420 },
+  sahara: { ...QUIET, crickets: 0.005, cricketFreq: 3600, chirpRate: 9, wind: 0.04, windFreq: 850, room: 0.015 },
+  amazon: { ...QUIET, crickets: 0.012, cricketFreq: 2600, chirpRate: 7, rain: 0.022, room: 0.015 },
+  outback: { ...QUIET, crickets: 0.016, cricketFreq: 5200, chirpRate: 24 },
+  moon: { ...QUIET, hum: 0.018, room: 0.006 },
+};
 
 /** Owns the AudioContext: unlock, master volume, spatial one-shots and the night ambience. */
 export class AudioEngine {
@@ -69,50 +94,79 @@ export class AudioEngine {
     setTimeout(() => panner.disconnect(), 1500);
   }
 
-  /** Crickets from the stage and a low room tone. */
-  startAmbient(at: Vec3): void {
+  /** The place's night: insects from the stage, plus its wind, rain or hum, and a low room tone. */
+  startAmbient(at: Vec3, place: PlaceId = 'home'): void {
     const ctx = this.ctx;
-    if (!ctx || !this.buffer || !this.master || this.ambient) return;
-    const panner = this.panner(at);
-    const crickets = ctx.createBufferSource();
-    crickets.buffer = this.buffer;
-    crickets.loop = true;
-    const band = ctx.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = 4400;
-    band.Q.value = 9;
-    const gate = ctx.createGain();
-    gate.gain.value = 0.5;
-    const chirp = ctx.createOscillator();
-    chirp.type = 'square';
-    chirp.frequency.value = 19;
-    const chirpDepth = ctx.createGain();
-    chirpDepth.gain.value = 0.5;
-    const level = ctx.createGain();
-    level.gain.value = 0.014;
-    const swell = ctx.createOscillator();
-    swell.frequency.value = 0.35;
-    const swellDepth = ctx.createGain();
-    swellDepth.gain.value = 0.012;
-    chirp.connect(chirpDepth).connect(gate.gain);
-    swell.connect(swellDepth).connect(level.gain);
-    crickets.connect(band).connect(gate).connect(level).connect(panner);
-    const room = ctx.createBufferSource();
-    room.buffer = this.buffer;
-    room.loop = true;
-    const low = ctx.createBiquadFilter();
-    low.type = 'lowpass';
-    low.frequency.value = 220;
-    const roomLevel = ctx.createGain();
-    roomLevel.gain.value = 0.025;
-    room.connect(low).connect(roomLevel).connect(this.master);
-    const sources = [crickets, chirp, swell, room];
+    const buffer = this.buffer;
+    const master = this.master;
+    if (!ctx || !buffer || !master || this.ambient) return;
+    const spec = AMBIENCE[place];
+    const sources: AudioScheduledSourceNode[] = [];
+    const outs: AudioNode[] = [];
+    const noise = (): AudioBufferSourceNode => {
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      sources.push(src);
+      return src;
+    };
+    const filter = (type: BiquadFilterType, frequency: number, q = 1): BiquadFilterNode => {
+      const f = ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = frequency;
+      f.Q.value = q;
+      return f;
+    };
+    const gain = (value: number): GainNode => {
+      const g = ctx.createGain();
+      g.gain.value = value;
+      return g;
+    };
+    /** A slow (or, for chirps, fast square) wobble added to a gain. */
+    const wobble = (target: AudioParam, rate: number, depth: number, type: OscillatorType = 'sine'): void => {
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = rate;
+      osc.connect(gain(depth)).connect(target);
+      sources.push(osc);
+    };
+    if (spec.crickets > 0) {
+      const panner = this.panner(at);
+      const gate = gain(0.5);
+      const level = gain(spec.crickets);
+      wobble(gate.gain, spec.chirpRate, 0.5, 'square');
+      wobble(level.gain, 0.35, spec.crickets * 0.86);
+      noise().connect(filter('bandpass', spec.cricketFreq, 9)).connect(gate).connect(level).connect(panner);
+      outs.push(panner);
+    }
+    if (spec.wind > 0) {
+      const level = gain(spec.wind);
+      wobble(level.gain, 0.11, spec.wind * 0.6);
+      noise().connect(filter('bandpass', spec.windFreq, 0.7)).connect(level).connect(master);
+      outs.push(level);
+    }
+    if (spec.rain > 0) {
+      const level = gain(spec.rain);
+      noise().connect(filter('highpass', 2200)).connect(level).connect(master);
+      outs.push(level);
+    }
+    if (spec.hum > 0) {
+      const osc = ctx.createOscillator();
+      osc.frequency.value = 55;
+      const level = gain(spec.hum);
+      wobble(level.gain, 0.07, spec.hum * 0.5);
+      osc.connect(level).connect(master);
+      sources.push(osc);
+      outs.push(level);
+    }
+    const roomLevel = gain(spec.room);
+    noise().connect(filter('lowpass', 220)).connect(roomLevel).connect(master);
+    outs.push(roomLevel);
     for (const s of sources) s.start();
     this.ambient = {
       stop: () => {
         for (const s of sources) s.stop();
-        panner.disconnect();
-        roomLevel.disconnect();
+        for (const o of outs) o.disconnect();
       },
     };
   }

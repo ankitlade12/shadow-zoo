@@ -61,6 +61,7 @@
     <div class="sub">Pinch a button to change it</div>
   </div>
   <div class="rows">
+    <Button id="tour" class="row"><ButtonLabel id="tour-label">World tour</ButtonLabel></Button>
     <Button id="assist" class="row"><ButtonLabel id="assist-label">Assist: Normal</ButtonLabel></Button>
     <Button id="hand" class="row"><ButtonLabel id="hand-label">Hand: Auto</ButtonLabel></Button>
     <Button id="sound" class="row"><ButtonLabel id="sound-label">Sound: On</ButtonLabel></Button>

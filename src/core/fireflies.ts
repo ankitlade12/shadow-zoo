@@ -55,7 +55,8 @@ export class Fireflies {
     return best;
   }
 
-  update(dt: number, pool: Pool): void {
+  /** `wind` (light-pool half-heights per second squared, from the place) drifts them gently downwind. */
+  update(dt: number, pool: Pool, wind = 0): void {
     // Settle at head height for the zoo's smallest creatures, so a full zoo can still reach them.
     const settle = groundY(pool) + 0.1 * pool.v;
     for (let i = this.list.length - 1; i >= 0; i--) {
@@ -66,7 +67,7 @@ export class Fireflies {
         continue;
       }
       f.y += (settle - f.y) * Math.min(1, dt * 0.35);
-      f.x += Math.sin(f.age * 1.7 + f.seed) * 0.03 * dt;
+      f.x += Math.sin(f.age * 1.7 + f.seed) * 0.03 * dt + wind * 0.15 * pool.v * dt;
       this.keepInside(f, pool);
     }
   }

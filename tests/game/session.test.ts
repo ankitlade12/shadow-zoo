@@ -9,6 +9,7 @@ import { createHandShadow, type HandShadow } from '../../src/game/hands.js';
 import { J } from '../../src/core/joints.js';
 import { createJointSet } from '../../src/core/poses.js';
 import { CHAOS_TIPS } from '../../src/game/rewards.js';
+import { placeOf, type PlaceId } from '../../src/core/world.js';
 import { Session } from '../../src/game/Session.js';
 
 const sil = new Silhouettes();
@@ -177,5 +178,75 @@ describe('Session chaos', () => {
     const view = session.update(1 / 30, [left, right], projector, pool, events);
     expect(events.some((e) => e.type === 'clap')).toBe(true);
     expect(view.caption).toBe('Thunderclap!');
+  });
+});
+
+describe('Session World Tour', () => {
+  const returning = (place: PlaceId = 'home', stamps: PlaceId[] = []) => {
+    const save = freshSave();
+    save.unlocked = ['rabbit', 'dog'];
+    save.streak = 1;
+    save.lastDay = '2026-11-10';
+    save.place = place;
+    save.stamps = stamps;
+    const session = new Session(shapes, sil, withSave(save), at('2026-11-10'), mulberry32(4));
+    session.onStage(pool, 1);
+    return session;
+  };
+  /** Opens the globe and pinches a place's marker (it must face the player). */
+  const travelTo = (session: Session, id: PlaceId, events: GameEvent[]) => {
+    session.openTour(events);
+    session.update(1 / 30, [hand(null)], projector, pool, events);
+    const marker = session.tour.markers(pool).find((m) => m.id === id)!;
+    expect(marker.visible).toBe(true);
+    const h = createHandShadow('right');
+    h.tracked = true;
+    h.pinchX = marker.x;
+    h.pinchY = marker.y;
+    // The view is one object, updated every frame, so keep what it said at each moment.
+    const hovering = session.update(1 / 30, [h], projector, pool, events).caption;
+    h.pinch = 'start';
+    const view = session.update(1 / 30, [h], projector, pool, events);
+    return { hovering, arrived: { caption: view.caption, tour: view.tour } };
+  };
+
+  it('opens the globe while the zoo waits, then travels to a picked place with a passport stamp', () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    run(session, 1, [hand(null)]);
+    session.openTour(events);
+    expect(events.some((e) => e.type === 'globe')).toBe(true);
+    const open = session.update(1 / 30, [hand(null)], projector, pool, events);
+    expect(open.tour).toBe(true);
+    expect(open.caption).toBe('Spin the globe. Pinch a place to travel');
+    const { hovering, arrived } = travelTo(session, 'arctic', events);
+    expect(hovering).toBe(placeOf('arctic').hover);
+    expect(arrived.tour).toBe(false);
+    expect(arrived.caption).toBe(placeOf('arctic').arrival);
+    expect(session.saves.data.place).toBe('arctic');
+    expect(session.saves.data.stamps).toEqual(['arctic']);
+    expect(session.zoo.rules).toBe(placeOf('arctic').rules);
+    expect(events.filter((e) => e.type === 'travel')).toHaveLength(1);
+    expect(events.filter((e) => e.type === 'stamp')).toHaveLength(1);
+    expect(run(session, 4, [hand(null)]).caption).toBe('Passport stamp 1 of 5!');
+  });
+
+  it('going home never stamps, and a second visit stamps nothing new', () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    travelTo(session, 'arctic', events);
+    travelTo(session, 'home', events);
+    expect(session.saves.data.place).toBe('home');
+    expect(session.zoo.rules).toBe(placeOf('home').rules);
+    travelTo(session, 'arctic', events);
+    expect(session.saves.data.stamps).toEqual(['arctic']);
+    expect(events.filter((e) => e.type === 'stamp')).toHaveLength(1);
+    expect(events.filter((e) => e.type === 'travel')).toHaveLength(3);
+  });
+
+  it('a returning player wakes up where the zoo was, under its rules', () => {
+    const session = returning('moon', ['moon']);
+    expect(session.saves.data.place).toBe('moon');
+    expect(session.zoo.rules).toBe(placeOf('moon').rules);
   });
 });

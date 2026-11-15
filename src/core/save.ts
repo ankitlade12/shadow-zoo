@@ -1,5 +1,6 @@
 import { CREATURES, type CreatureId } from './library.js';
 import type { AssistLevel } from './matcher.js';
+import { PLACE_IDS, type PlaceId } from './world.js';
 
 export const SAVE_KEY = 'shadowzoo.save.v1';
 export type HandPreference = 'auto' | 'left' | 'right';
@@ -24,6 +25,10 @@ export interface SaveData {
   lastDay: string | null;
   /** Local date when the daily visitor was last matched. */
   dailyDone: string | null;
+  /** Where the zoo is now on the World Tour. */
+  place: PlaceId;
+  /** Passport stamps: the places visited, in order. */
+  stamps: PlaceId[];
   settings: Settings;
 }
 
@@ -38,6 +43,8 @@ export const freshSave = (settings: Settings = { ...DEFAULT_SETTINGS }): SaveDat
   streak: 0,
   lastDay: null,
   dailyDone: null,
+  place: 'home',
+  stamps: [],
   settings: { ...settings },
 });
 
@@ -71,6 +78,10 @@ export function parseSave(text: string): SaveData | null {
   if (Array.isArray(raw.unlocked)) {
     for (const id of raw.unlocked) if (typeof id === 'string' && IDS.has(id) && !unlocked.includes(id as CreatureId)) unlocked.push(id as CreatureId);
   }
+  const stamps: PlaceId[] = [];
+  if (Array.isArray(raw.stamps)) {
+    for (const id of raw.stamps) if (PLACE_IDS.includes(id as PlaceId) && !stamps.includes(id as PlaceId)) stamps.push(id as PlaceId);
+  }
   const s = isRecord(raw.settings) ? raw.settings : {};
   return {
     version: 1,
@@ -81,6 +92,8 @@ export function parseSave(text: string): SaveData | null {
     streak: count(raw.streak),
     lastDay: day(raw.lastDay),
     dailyDone: day(raw.dailyDone),
+    place: pick(raw.place, PLACE_IDS, 'home'),
+    stamps,
     settings: {
       assist: pick(s.assist, ['gentle', 'normal', 'expert'] as const, DEFAULT_SETTINGS.assist),
       hand: pick(s.hand, ['auto', 'left', 'right'] as const, DEFAULT_SETTINGS.hand),

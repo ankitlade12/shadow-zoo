@@ -50,8 +50,15 @@ All screenshots are taken from the demo video: IWSDK WebXR emulator footage with
    - **Grab and throw:** pinch a creature to pick it up. It dangles and protests in its own voice; let go mid-swing and it flies.
    - **Bonk:** swipe fast and your shadow knocks creatures flying. A flying creature knocks the ones it hits, the combos get called out ("Double bonk!", "Zoo-quake!"), and everyone lands dizzy.
    - **Clap:** the whole zoo jumps.
-4. **Grow your zoo.** Every match earns up to three stars, and a row of silhouettes on the wall shows who is still missing. Finding the last one sets off a finale and turns the lantern gold.
-5. **Come back tomorrow.** Your zoo is saved on your device, your streak warms the lantern, and a daily visitor brings a twist: a shy one you must hold perfectly still, or a big one that needs your hand closer to the light.
+4. **Travel the world.** Open the Menu and pick World tour: a globe of light and shadow appears on your wall. Spin it with a pinch, and pinch a place to take your zoo there. Every zoo has its own light, weather, night sounds and rules:
+   - **The Arctic:** icy blue light and snow. Thrown creatures slide on the ice.
+   - **The Sahara:** a deep orange glow and blowing sand. The wind carries everything east.
+   - **The Amazon:** green light, rain and frogs. Every pinch releases a swarm of fireflies.
+   - **The Outback:** red dusk. Everything bounces sky-high.
+   - **The Moon:** silver light and drifting dust. Low gravity: throw a creature and watch it float.
+   - Every first visit earns a passport stamp, and your zoo stays where you left it.
+5. **Grow your zoo.** Every match earns up to three stars, and a row of silhouettes on the wall shows who is still missing. Finding the last one sets off a finale and turns the lantern gold.
+6. **Come back tomorrow.** Your zoo is saved on your device, your streak warms the lantern, and a daily visitor brings a twist: a shy one you must hold perfectly still, or a big one that needs your hand closer to the light.
 
 ## How it works
 
@@ -63,6 +70,7 @@ All screenshots are taken from the demo video: IWSDK WebXR emulator footage with
 | Matching | Shadows are normalized for position and size, then scored by overlap plus a 64-direction radial signature that finds the rotation and checks the ears, jaws and legs. A short hold and a gently relaxing threshold keep it fair. Two-handed creatures score both hands together. | [silhouette.ts](src/core/silhouette.ts), [matcher.ts](src/core/matcher.ts), [Visitors.ts](src/game/Visitors.ts) |
 | Creatures | Each creature is itself a hand shadow that blends between a base pose and an action pose, with its own gait: hop, trot, slither, strut, dangle, creep or fly. As the zoo fills, everyone eases to a shared size and spreads out along the ground. | [library.ts](src/core/library.ts), [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [crowd.ts](src/core/crowd.ts) |
 | Wearing | When your shadow matches a creature you've found, you wear it; closing its jaw (or ears, legs or head) gives it a voice. | [Puppeteer.ts](src/game/Puppeteer.ts), [puppet.ts](src/core/puppet.ts) |
+| World Tour | The globe is drawn on the wall: land as dots of shadow from a 5-degree grid of Natural Earth's coastlines, projected orthographically and tipped toward you. The pinch point (between thumb and index tips) hovers, spins and picks. Each place sets the lantern's color, the weather, the ambience and the physics rules (gravity, bounce, ice, wind and fireflies per pinch). The place and passport stamps are saved. | [world.ts](src/core/world.ts), [Tour.ts](src/game/Tour.ts), [weather.ts](src/core/weather.ts) |
 | Chaos | After the first-time tutorial, a pinch on a creature picks it up and letting go throws it with your fingertip's speed. A fast hand shadow knocks creatures flying, and a flying creature passes part of its speed to the ones it hits, so pile-ups always settle. Creatures tumble under gravity, bounce off the edge of the light and land dizzy. A clap (palms meeting right after being apart) makes everyone jump. | [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [interact.ts](src/core/interact.ts) |
 | Progress | Guided first visitors, stars, the zoo row, the finale, the streak and daily twists, saved to the device. | [Progression.ts](src/game/Progression.ts), [rewards.ts](src/game/rewards.ts), [daily.ts](src/core/daily.ts), [save.ts](src/core/save.ts), [Session.ts](src/game/Session.ts) |
 | Teaching | Short captions and a glowing ghost hand that demonstrates each shape, including both hands for the bird. | [Onboarding.ts](src/game/Onboarding.ts), [GhostHand.ts](src/render/GhostHand.ts) |
@@ -78,13 +86,14 @@ All screenshots are taken from the demo video: IWSDK WebXR emulator footage with
 2. Sit facing a wall in a lit room and put your controllers down.
 3. Press **Light the lantern**, and allow hand tracking and spatial data when asked.
 4. A rabbit outline appears within a few seconds. Make the rabbit (index and middle fingers up, the others folded) and it comes alive. The captions take it from there.
+5. After the first creatures, try the wild side: pinch a creature to throw it, swipe fast to bonk, clap. Then open the **Menu** chip on the wall and pick **World tour** to take your zoo to the Arctic, the Sahara, the Amazon, the Outback or the Moon.
 
 **On a computer**
 
 Open the same link in Chrome, Edge, Safari or Firefox.
 
 - **Real hands:** press **Light the lantern, with my real hands** and hold a hand up to your camera. Make a V for the rabbit. The camera picture stays on your device.
-- **Mouse:** press **or play with the mouse**. Move the mouse to move your shadow and press **1** to **7** to make the shapes: 1 is the rabbit, and 7 is the two-handed bird. Click to pinch, hold Space to snap a worn creature's jaw, and scroll for a bigger shadow. **Esc** leaves.
+- **Mouse:** press **or play with the mouse**. Move the mouse to move your shadow and press **1** to **7** to make the shapes: 1 is the rabbit, and 7 is the two-handed bird. Click to pinch (hold the click on a creature to carry it, and let go mid-swing to throw it), hold Space to snap a worn creature's jaw, and scroll for a bigger shadow. Click the **Menu** chip for **World tour**. **Esc** leaves.
 
 ## How Shadow Zoo meets the judging criteria
 
@@ -142,7 +151,7 @@ Requires Node 20.19+, 22.12+ or 24+.
 ```bash
 npm install
 npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
-npm test             # 213 tests (Vitest)
+npm test             # 237 tests (Vitest)
 npm run typecheck
 npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
 ```

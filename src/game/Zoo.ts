@@ -6,6 +6,7 @@ import { J } from '../core/joints.js';
 import type { CreatureId, CreatureShape } from '../core/library.js';
 import { HEART, Particles, SPARK, STAR } from '../core/particles.js';
 import type { Handedness } from '../core/poses.js';
+import { HOME_RULES, type Rules } from '../core/world.js';
 import type { GameEvent, Revealed } from './events.js';
 import type { HandShadow } from './hands.js';
 import type { Worn } from './Puppeteer.js';
@@ -44,6 +45,8 @@ export class Zoo {
   chaos = false;
   /** Whether a clap counts (not while the player brings both hands together for a two-handed shape). */
   clapReady = true;
+  /** The place's rules: gravity, bounce, ice, wind and fireflies per pinch. */
+  rules: Rules = HOME_RULES;
   private readonly unlockedSet = new Set<CreatureId>();
   private readonly petTimers = new Map<number, number>();
   private readonly creatureEvents: CreatureEvent[] = [];
@@ -128,7 +131,7 @@ export class Zoo {
     for (const creature of this.creatures) {
       if (creature.mode === 'chase') this.followFirefly(creature);
       this.updatePet(creature, dt, hands, events);
-      creature.update(dt, pool, this.creatureEvents);
+      creature.update(dt, pool, this.creatureEvents, this.rules);
     }
     this.collide(pool, events);
     for (const event of this.creatureEvents) {
@@ -144,7 +147,7 @@ export class Zoo {
     }
     this.comboLeft = Math.max(0, this.comboLeft - dt);
     if (this.comboLeft === 0) this.combo = 0;
-    this.fireflies.update(dt, pool);
+    this.fireflies.update(dt, pool, this.rules.wind);
     this.particles.update(dt);
   }
 
@@ -296,10 +299,15 @@ export class Zoo {
         events.push({ type: 'grab', species: target.species, x: target.x, y: target.y });
         continue;
       }
-      const firefly = this.fireflies.spawn(hand.tipX, hand.tipY, pool, this.rng);
-      if (!firefly) continue;
-      this.particles.emit(SPARK, firefly.x, firefly.y, 5, 0.12, this.rng);
-      events.push({ type: 'firefly', x: firefly.x, y: firefly.y });
+      // Some places release a swarm: the extra fireflies scatter a little around the pinch.
+      for (let k = 0; k < this.rules.fireflies; k++) {
+        const dx = k === 0 ? 0 : (this.rng() * 2 - 1) * 0.06 * pool.v;
+        const dy = k === 0 ? 0 : (this.rng() * 2 - 1) * 0.06 * pool.v;
+        const firefly = this.fireflies.spawn(hand.tipX + dx, hand.tipY + dy, pool, this.rng);
+        if (!firefly) break;
+        this.particles.emit(SPARK, firefly.x, firefly.y, 5, 0.12, this.rng);
+        if (k === 0) events.push({ type: 'firefly', x: firefly.x, y: firefly.y });
+      }
     }
   }
 

@@ -9,5 +9,6 @@ Shadow Zoo is MIT licensed (see [LICENSE](LICENSE)). The published site also bun
 | [three.js](https://github.com/mrdoob/three.js) (`super-three`) | rendering | MIT |
 | [pmndrs uikit](https://github.com/pmndrs/uikit) | the in-game menu | MIT |
 | [MediaPipe Tasks Vision](https://github.com/google-ai-edge/mediapipe) (`@mediapipe/tasks-vision`) and its [hand landmarker model](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker) | camera hand tracking in the desktop preview | Apache License 2.0 |
+| [Natural Earth](https://www.naturalearthdata.com/) 1:110m land polygons | the World Tour globe's land, rasterized to a 5-degree grid in [world.ts](src/core/world.ts) | Public domain |
 
 The Apache License 2.0 is available at https://www.apache.org/licenses/LICENSE-2.0. The MediaPipe engine (`vision_wasm_internal.*`) and the model (`hand_landmarker.task`) are redistributed unmodified.

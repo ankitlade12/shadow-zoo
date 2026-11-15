@@ -209,9 +209,9 @@ export class ShadowCanvas {
     this.compositeMaterial.uniforms.uLight.value = value;
   }
 
-  /** A golden lantern, once the whole zoo is found; the usual warm amber otherwise. */
-  setGolden(golden: boolean): void {
-    (this.compositeMaterial.uniforms.uWarm.value as Color).setRGB(1.0, golden ? 0.83 : 0.76, golden ? 0.38 : 0.48);
+  /** The lantern's color (RGB, 0 to 1): amber at home, gold once the zoo is complete, each place's own on the World Tour. */
+  setWarm(r: number, g: number, b: number): void {
+    (this.compositeMaterial.uniforms.uWarm.value as Color).setRGB(r, g, b);
   }
 
   /** The flame's flicker: light-pool brightness (around 1) and shadow sway on the wall (meters). */

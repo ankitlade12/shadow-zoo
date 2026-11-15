@@ -1,4 +1,5 @@
 import type { CreatureId, Motion } from './library.js';
+import { HOME_RULES, type Rules } from './world.js';
 
 /** Light-pool ellipse half-axes on the stage (meters). */
 export interface Pool {
@@ -22,9 +23,10 @@ const TRICK_TIME = 0.9;
 const FIT_RATE = 2.5;
 /** Gravity on a tumbling walker, in light-pool half-heights per second squared (scales with the stage). */
 const GRAVITY = 7;
-/** Share of speed kept when bouncing off the edge of the light, and off the ground. */
+/** Share of speed kept when bouncing off the edge of the light (the ground's bounce is the place's rule). */
 const WALL_BOUNCE = 0.6;
-const GROUND_BOUNCE = 0.42;
+/** On ice, a landed walker slides until it is slower than this (pool half-heights per second). */
+const SLIDE_STOP = 0.2;
 /** Below this falling speed (pool half-heights per second) a walker lands instead of bouncing. */
 const LAND_SPEED = 0.9;
 /** Fliers brake in the air instead of falling, and catch themselves below this speed. */
@@ -281,7 +283,7 @@ export class Creature {
     this.fireflyId = -1;
   }
 
-  update(dt: number, pool: Pool, events: CreatureEvent[]): void {
+  update(dt: number, pool: Pool, events: CreatureEvent[], rules: Rules = HOME_RULES): void {
     this.phase += dt;
     this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     this.blink(dt);
@@ -321,7 +323,7 @@ export class Creature {
         this.carry(dt);
         break;
       case 'tumble':
-        this.tumble(dt, pool, events);
+        this.tumble(dt, pool, events, rules);
         break;
       case 'dizzy':
         this.timer -= dt;
@@ -380,14 +382,18 @@ export class Creature {
     this.lift = 0;
   }
 
-  /** Flying through the light: walkers fall and bounce, fliers brake in the air; the light's edge bounces everyone. */
-  private tumble(dt: number, pool: Pool, events: CreatureEvent[]): void {
+  /**
+   * Flying through the light: walkers fall and bounce, fliers brake in the air, and the light's edge bounces
+   * everyone. The place's rules set the gravity, the bounce, the wind and whether the ground is ice.
+   */
+  private tumble(dt: number, pool: Pool, events: CreatureEvent[], rules: Rules): void {
     const air = airborne(this.motion);
     if (air) {
       const drag = Math.exp(-AIR_DRAG * dt);
       this.vx *= drag;
       this.vy *= drag;
-    } else this.vy -= GRAVITY * pool.v * dt;
+    } else this.vy -= GRAVITY * rules.gravity * pool.v * dt;
+    this.vx += rules.wind * pool.v * dt;
     this.x += this.vx * dt;
     this.y += this.vy * dt;
     this.roll += this.spinRate * dt;
@@ -418,9 +424,14 @@ export class Creature {
     if (this.y <= ground && this.vy <= 0) {
       this.y = ground;
       if (-this.vy > LAND_SPEED * pool.v) {
-        this.vy = -this.vy * GROUND_BOUNCE;
+        this.vy = -this.vy * rules.bounce;
         this.vx *= 0.7;
         this.spinRate *= 0.7;
+      } else if (rules.slide > 0 && Math.abs(this.vx) > SLIDE_STOP * pool.v) {
+        // On ice it keeps sliding along the ground, slowing down and spinning less.
+        this.vy = 0;
+        this.vx *= rules.slide ** dt;
+        this.spinRate *= Math.exp(-6 * dt);
       } else this.recover(true, events);
     }
   }

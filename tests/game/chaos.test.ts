@@ -6,6 +6,7 @@ import { mulberry32 } from '../../src/core/rng.js';
 import { Silhouettes } from '../../src/core/silhouette.js';
 import type { GameEvent } from '../../src/game/events.js';
 import { createHandShadow, type HandShadow } from '../../src/game/hands.js';
+import { placeOf } from '../../src/core/world.js';
 import { Zoo } from '../../src/game/Zoo.js';
 
 const sil = new Silhouettes();
@@ -186,5 +187,19 @@ describe('Zoo chaos', () => {
     clap([0.3, 0.05]);
     expect(events.filter((e) => e.type === 'clap')).toHaveLength(1);
     expect(zoo.creatures.every((c) => c.mode === 'tumble')).toBe(true);
+  });
+});
+
+describe('Zoo around the world', () => {
+  it('in the Amazon one pinch releases a swarm of fireflies', () => {
+    const { zoo, events, creatures } = playing('rabbit');
+    zoo.rules = placeOf('amazon').rules;
+    const hand = trackedHand();
+    hand.tipX = creatures[0].x > 0 ? -0.4 : 0.4;
+    hand.tipY = 0.3;
+    hand.pinch = 'start';
+    zoo.update(1 / 60, pool, [hand], null, events);
+    expect(zoo.fireflies.list).toHaveLength(3);
+    expect(events.filter((e) => e.type === 'firefly')).toHaveLength(1);
   });
 });

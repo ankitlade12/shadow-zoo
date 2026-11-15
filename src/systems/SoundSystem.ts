@@ -31,6 +31,12 @@ function soundFor(event: GameEvent): SoundName {
       return 'thud';
     case 'clap':
       return 'clap';
+    case 'globe':
+      return 'globe';
+    case 'travel':
+      return 'travel';
+    case 'stamp':
+      return 'stamp';
   }
 }
 
@@ -49,6 +55,7 @@ export class SoundSystem extends createSystem({}) {
   private readonly f = new Vector3();
   private readonly q = new Quaternion();
   private ambientFor = -1;
+  private ambientPlace = '';
   private tracedStage = -1;
 
   init(): void {
@@ -74,10 +81,13 @@ export class SoundSystem extends createSystem({}) {
       store.events.length = 0;
       return;
     }
-    if (this.engine.ready && this.ambientFor !== store.stageVersion) {
+    // The night sounds start with the stage and change with the place the zoo travels to.
+    const place = store.session?.saves.data.place ?? 'home';
+    if (this.engine.ready && (this.ambientFor !== store.stageVersion || this.ambientPlace !== place)) {
       this.engine.stopAmbient();
-      this.engine.startAmbient(stage.origin);
+      this.engine.startAmbient(stage.origin, place);
       this.ambientFor = store.stageVersion;
+      this.ambientPlace = place;
     }
     // Dev-only traces (here and below) let headless runs check the sounds nobody can hear, and let
     // scripts/render-audio.mjs rebuild a recording's soundtrack from the game's own recipes.

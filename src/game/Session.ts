@@ -5,12 +5,14 @@ import { TUNING } from '../core/matcher.js';
 import type { ShadowProjector } from '../core/projector.js';
 import { SaveStore, type HandPreference, type Settings, type StoragePort } from '../core/save.js';
 import type { Silhouettes } from '../core/silhouette.js';
+import { placeOf, type PlaceId } from '../core/world.js';
 import type { GameEvent, Revealed } from './events.js';
 import type { HandShadow } from './hands.js';
 import { captionFor, Onboarding, showGhost, type CaptionInput, type Step } from './Onboarding.js';
 import { Progression, type VisitorPlan } from './Progression.js';
 import { Puppeteer, type Worn } from './Puppeteer.js';
-import { CHAOS_TIPS, comboMessage, revealMessage, zooComplete } from './rewards.js';
+import { CHAOS_TIPS, comboMessage, passportMessage, revealMessage, TOUR_TIP, zooComplete } from './rewards.js';
+import { Tour } from './Tour.js';
 import { Visitors } from './Visitors.js';
 import { Zoo } from './Zoo.js';
 
@@ -35,6 +37,8 @@ export interface SessionView {
   caption: string | null;
   ghost: CreatureId | null;
   worn: Worn | null;
+  /** The World Tour's globe is open on the wall (the zoo waits meanwhile). */
+  tour: boolean;
 }
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
@@ -47,8 +51,9 @@ export class Session {
   readonly visitors: Visitors;
   readonly zoo: Zoo;
   readonly greeting: Greeting;
+  readonly tour = new Tour();
   private readonly puppeteer: Puppeteer;
-  private readonly view: SessionView = { caption: null, ghost: null, worn: null };
+  private readonly view: SessionView = { caption: null, ghost: null, worn: null, tour: false };
   private readonly input: Mutable<CaptionInput>;
   private readonly handSets: Record<HandPreference, HandShadow[]> = { auto: [], left: [], right: [] };
   private plan: VisitorPlan | null = null;
@@ -60,9 +65,11 @@ export class Session {
   private announce: string | null = null;
   private announceLeft = 0;
   private announcePriority = 0;
-  /** The chaos tips still to show this session, and the quiet seconds before the next one. */
-  private readonly tips = [...CHAOS_TIPS];
+  /** The tips still to show this session, and the quiet seconds before the next one. */
+  private readonly tips = [...CHAOS_TIPS, TOUR_TIP];
   private tipWait = TIP_DELAY;
+  /** A line to show once the current announcement ends (a new passport stamp after an arrival). */
+  private followUp: string | null = null;
   private stepTime = 0;
   private lastStep: Step;
 
@@ -84,6 +91,7 @@ export class Session {
     this.visitors = new Visitors(shapes, sil, [], 1.2, TUNING[data.settings.assist]);
     this.zoo = new Zoo(shapes, rng);
     this.zoo.setMotionScale(data.settings.reducedMotion ? REDUCED_MOTION_SCALE : 1);
+    this.zoo.rules = placeOf(data.place).rules;
     this.puppeteer = new Puppeteer(shapes, sil);
     if (data.unlocked.length > 0 && this.greeting !== 'same-day') this.welcome = WELCOME_SECONDS;
     this.input = { step: this.onboarding.step, visitor: null, twist: null, visitorElapsed: 0, visitorProgress: 0, handsMissing: 0, welcome: 0, streak: data.streak };
@@ -119,6 +127,7 @@ export class Session {
     const active = this.activeHands(hands);
     this.progression.tick(dt);
     this.updateTimers(dt, active);
+    if (this.tour.open) return this.updateTour(dt, active, pool, events);
     this.schedule();
     const revealed = this.visitors.update(dt, active);
     if (revealed && this.plan) this.onReveal(revealed, events, pool);
@@ -143,7 +152,47 @@ export class Session {
     this.view.caption = captionFor(input);
     this.view.ghost = showGhost(input) ? input.visitor : null;
     this.view.worn = worn;
+    this.view.tour = false;
     return this.view;
+  }
+
+  /** Opens the World Tour's globe on the wall, turned toward where the zoo is now. */
+  openTour(events: GameEvent[]): void {
+    if (this.tour.open) return;
+    this.tour.show(this.saves.data.place);
+    events.push({ type: 'globe', x: 0, y: 0 });
+  }
+
+  /** While the globe is open the zoo and its visitors wait; the hands spin the globe and pick a place. */
+  private updateTour(dt: number, hands: readonly HandShadow[], pool: Pool, events: GameEvent[]): SessionView {
+    const action = this.tour.update(dt, hands, pool);
+    if (action?.type === 'travel') this.travel(action.place, events);
+    else if (action?.type === 'close') this.tour.hide();
+    this.announceLeft = Math.max(0, this.announceLeft - dt);
+    const view = this.view;
+    if (this.tour.open) view.caption = this.tour.hover ? placeOf(this.tour.hover).hover : 'Spin the globe. Pinch a place to travel';
+    else view.caption = this.announceLeft > 0 ? this.announce : null;
+    view.ghost = null;
+    view.worn = null;
+    view.tour = this.tour.open;
+    return view;
+  }
+
+  /** Takes the zoo somewhere: its rules (and, through the place, its light, weather and sounds), with a stamp on a first visit. */
+  private travel(id: PlaceId, events: GameEvent[]): void {
+    const data = this.saves.data;
+    const place = placeOf(id);
+    this.tour.hide();
+    data.place = id;
+    this.zoo.rules = place.rules;
+    events.push({ type: 'travel', place: id, x: 0, y: 0 });
+    this.say(place.arrival, NEWS, 3.5);
+    if (id !== 'home' && !data.stamps.includes(id)) {
+      data.stamps.push(id);
+      events.push({ type: 'stamp', place: id, x: 0, y: 0 });
+      this.followUp = passportMessage(data.stamps.length);
+    }
+    this.saves.save();
   }
 
   private activeHands(hands: readonly HandShadow[]): readonly HandShadow[] {
@@ -212,8 +261,13 @@ export class Session {
 
   /** After the tutorial, teaches grabbing, then swatting and clapping, in a quiet moment with creatures to play with. */
   private nextTip(dt: number): void {
-    if (this.tips.length === 0 || this.onboarding.step !== 'done' || this.welcome > 0 || this.zoo.creatures.length === 0) return;
     if (this.announceLeft > 0) return;
+    if (this.followUp) {
+      this.say(this.followUp, TIP, 3);
+      this.followUp = null;
+      return;
+    }
+    if (this.tips.length === 0 || this.onboarding.step !== 'done' || this.welcome > 0 || this.zoo.creatures.length === 0) return;
     this.tipWait -= dt;
     if (this.tipWait > 0) return;
     this.say(this.tips.shift()!, TIP, TIP_SECONDS);

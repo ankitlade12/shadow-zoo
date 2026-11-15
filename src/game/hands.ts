@@ -15,6 +15,12 @@ export interface HandShadow {
   drawCount: number;
   tipX: number;
   tipY: number;
+  /**
+   * Where a pinch lands: the shadow of the point between the thumb and index tips. Unlike the fingertip,
+   * it barely moves as the fingers close, so what the hand hovers over is what it pinches.
+   */
+  pinchX: number;
+  pinchY: number;
   palmX: number;
   palmY: number;
   /** Palm shadow speed on the stage (m/s). */
@@ -39,6 +45,8 @@ export const createHandShadow = (side: Handedness): HandShadow => ({
   drawCount: 0,
   tipX: 0,
   tipY: 0,
+  pinchX: 0,
+  pinchY: 0,
   palmX: 0,
   palmY: 0,
   speed: 0,
@@ -79,6 +87,11 @@ export function updateHandShadow(hand: HandShadow, joints: JointSet | null, proj
   if (projector.project(p[t], p[t + 1], p[t + 2])) {
     hand.tipX = projector.x;
     hand.tipY = projector.y;
+  }
+  const a = J.thumbTip * 3;
+  if (projector.project((p[a] + p[t]) / 2, (p[a + 1] + p[t + 1]) / 2, (p[a + 2] + p[t + 2]) / 2)) {
+    hand.pinchX = projector.x;
+    hand.pinchY = projector.y;
   }
   if (projector.project(p[m], p[m + 1], p[m + 2])) {
     hand.palmX = projector.x;

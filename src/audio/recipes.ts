@@ -3,7 +3,20 @@ import type { CreatureId } from '../core/library.js';
 /** Bonks get higher with every hit in a combo, up to the fifth. */
 export type BonkLevel = 1 | 2 | 3 | 4 | 5;
 
-export type SoundName = 'reveal' | 'firefly' | 'eat' | 'pet' | 'flee' | 'whoosh' | 'thud' | 'clap' | `bonk-${BonkLevel}` | `voice-${CreatureId}`;
+export type SoundName =
+  | 'reveal'
+  | 'firefly'
+  | 'eat'
+  | 'pet'
+  | 'flee'
+  | 'whoosh'
+  | 'thud'
+  | 'clap'
+  | 'globe'
+  | 'travel'
+  | 'stamp'
+  | `bonk-${BonkLevel}`
+  | `voice-${CreatureId}`;
 
 interface ToneSpec {
   readonly type: OscillatorType;
@@ -95,6 +108,23 @@ export function playRecipe(name: SoundName, ctx: AudioContext, out: AudioNode, t
       noise(ctx, out, t, buffer, { dur: 0.09, gain: 0.3, filter: 'highpass', freq: 2500 });
       noise(ctx, out, t, buffer, { dur: 0.6, gain: 0.32, filter: 'lowpass', freq: 700, delay: 0.03 });
       tone(ctx, out, t, { type: 'sine', f0: 95, f1: 42, dur: 0.6, gain: 0.32, attack: 0.006, delay: 0.02 });
+      break;
+    case 'globe':
+      // A soft shimmer as the globe appears on the wall.
+      [660, 880, 1320].forEach((f, k) => tone(ctx, out, t, { type: 'sine', f0: f, f1: f, dur: 0.5, gain: 0.08, delay: k * 0.07, attack: 0.02 }));
+      noise(ctx, out, t, buffer, { dur: 0.5, gain: 0.03, filter: 'highpass', freq: 7000 });
+      break;
+    case 'travel':
+      // Off you go: a rising whoosh, then a little fanfare climbing a major chord.
+      noise(ctx, out, t, buffer, { dur: 0.6, gain: 0.14, filter: 'bandpass', freq: 400, freq1: 3000, q: 1.2 });
+      [523, 659, 784, 1047].forEach((f, k) => tone(ctx, out, t, { type: 'triangle', f0: f, f1: f, dur: 0.35, gain: 0.12, delay: 0.18 + k * 0.1, attack: 0.01 }));
+      break;
+    case 'stamp':
+      // The passport stamp: a thunk and a small bell.
+      tone(ctx, out, t, { type: 'sine', f0: 170, f1: 90, dur: 0.09, gain: 0.28, attack: 0.003 });
+      noise(ctx, out, t, buffer, { dur: 0.04, gain: 0.18, filter: 'lowpass', freq: 900 });
+      tone(ctx, out, t, { type: 'sine', f0: 1568, f1: 1568, dur: 0.9, gain: 0.1, delay: 0.06 });
+      tone(ctx, out, t, { type: 'sine', f0: 2350, f1: 2350, dur: 0.5, gain: 0.05, delay: 0.06 });
       break;
     case 'bonk-1':
     case 'bonk-2':

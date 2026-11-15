@@ -98,3 +98,21 @@ describe('SaveStore', () => {
     expect(new SaveStore(storage).data.settings.sound).toBe(false);
   });
 });
+
+describe('World Tour saves', () => {
+  it('keeps where the zoo is and its passport stamps, dropping anything unknown', () => {
+    const save = parseSave(JSON.stringify({ ...freshSave(), place: 'moon', stamps: ['arctic', 'mars', 'arctic', 'moon'] }))!;
+    expect(save.place).toBe('moon');
+    expect(save.stamps).toEqual(['arctic', 'moon']);
+  });
+
+  it('opens an older save at home with an empty passport', () => {
+    const old = JSON.parse(JSON.stringify(freshSave()));
+    delete old.place;
+    delete old.stamps;
+    const save = parseSave(JSON.stringify(old))!;
+    expect(save.place).toBe('home');
+    expect(save.stamps).toEqual([]);
+    expect(parseSave(JSON.stringify({ ...freshSave(), place: 'atlantis' }))!.place).toBe('home');
+  });
+});

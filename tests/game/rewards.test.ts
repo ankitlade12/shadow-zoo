@@ -4,7 +4,7 @@ import { mulberry32 } from '../../src/core/rng.js';
 import { freshSave } from '../../src/core/save.js';
 import { Silhouettes } from '../../src/core/silhouette.js';
 import { captionFor } from '../../src/game/Onboarding.js';
-import { CHAOS_TIPS, comboMessage, revealMessage, starText, zooComplete, zooProgress } from '../../src/game/rewards.js';
+import { CHAOS_TIPS, comboMessage, passportMessage, revealMessage, STAMPABLE, starText, TOUR_TIP, zooComplete, zooProgress } from '../../src/game/rewards.js';
 import { Zoo } from '../../src/game/Zoo.js';
 
 describe('rewards', () => {
@@ -68,5 +68,17 @@ describe('Chaos callouts', () => {
 
   it('keeps every tip short enough for one line on the wall', () => {
     for (const tip of CHAOS_TIPS) expect(tip.length).toBeLessThanOrEqual(46);
+  });
+});
+
+describe('Passport', () => {
+  it('counts places visited in the menu, and names each new stamp', () => {
+    const save = freshSave();
+    save.unlocked = ['rabbit'];
+    save.stamps = ['arctic', 'moon'];
+    expect(zooProgress(save)).toBe(`1 of ${CREATURES.length} creatures found, 2 of ${STAMPABLE} places`);
+    expect(STAMPABLE).toBe(5);
+    expect(passportMessage(3)).toBe('Passport stamp 3 of 5!');
+    expect(TOUR_TIP.length).toBeLessThanOrEqual(46);
   });
 });

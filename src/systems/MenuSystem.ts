@@ -49,6 +49,10 @@ export class MenuSystem extends createSystem({}) {
     menu.visible = false;
     chip.requireElementById('open').addEventListener('click', () => this.setOpen(!this.open));
     for (const key of KEYS) menu.requireElementById(key).addEventListener('click', () => this.change(key));
+    menu.requireElementById('tour').addEventListener('click', () => {
+      this.setOpen(false);
+      store.session?.openTour(store.events);
+    });
     menu.requireElementById('relight').addEventListener('click', () => {
       store.relightRequested = true;
       this.setOpen(false);

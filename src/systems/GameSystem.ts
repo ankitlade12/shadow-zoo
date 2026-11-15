@@ -10,6 +10,8 @@ import { mulberry32 } from '../core/rng.js';
 import type { StoragePort } from '../core/save.js';
 import { Silhouettes } from '../core/silhouette.js';
 import type { Stage } from '../core/stage.js';
+import { WeatherField } from '../core/weather.js';
+import { GLOBE_DOTS, placeOf, projectGlobe, type Place, type Projected } from '../core/world.js';
 import { createHandShadow, updateHandShadow, type HandShadow } from '../game/hands.js';
 import type { Worn } from '../game/Puppeteer.js';
 import { Session } from '../game/Session.js';
@@ -17,6 +19,9 @@ import { Caption } from '../render/Caption.js';
 import { GhostHand } from '../render/GhostHand.js';
 import { CH_GLOW, CH_SHADOW, CH_TARGET, type ShadowCanvas } from '../render/ShadowCanvas.js';
 import { store } from '../runtime/store.js';
+
+/** The lantern once every creature is found. */
+const GOLD: readonly [number, number, number] = [1, 0.83, 0.38];
 
 function browserStorage(): StoragePort | null {
   try {
@@ -50,6 +55,10 @@ export class GameSystem extends createSystem({}) {
   private lastVisitor: string | null = null;
   /** Whether the lantern is golden now (the zoo is complete). */
   private golden = false;
+  private readonly weather = new WeatherField(mulberry32(97));
+  /** The lantern's color now, easing toward the place's; null until the first frame, which takes it at once. */
+  private warm: [number, number, number] | null = null;
+  private readonly globePoint: Projected = { x: 0, y: 0, depth: 0 };
 
   init(): void {
     this.world.createTransformEntity(this.caption.mesh);
@@ -92,13 +101,110 @@ export class GameSystem extends createSystem({}) {
     this.ghost.update(delta);
     this.ghostPair.update(delta);
     if (this.session.complete !== this.golden) this.light(canvas);
+    const place = placeOf(this.session.saves.data.place);
+    if (this.weather.kind !== place.weather) this.weather.set(place.weather, this.pool);
+    if (!view.tour) this.weather.update(delta, this.pool, place.rules.wind);
+    this.tint(canvas, place, delta);
     canvas.begin();
-    this.drawRow(canvas);
-    this.drawHands(canvas, view.worn);
-    this.drawVisitor(canvas);
-    this.drawZoo(canvas, stage);
-    this.drawEmbers(canvas, stage);
+    if (view.tour) {
+      // The World Tour: the globe takes the light while the zoo waits.
+      this.drawGlobe(canvas);
+      this.drawHands(canvas, null);
+      this.drawPinchCursors(canvas);
+    } else {
+      this.drawRow(canvas);
+      this.drawHands(canvas, view.worn);
+      this.drawVisitor(canvas);
+      this.drawZoo(canvas, stage);
+      this.drawWeather(canvas, place);
+      this.drawEmbers(canvas, stage);
+    }
     canvas.end();
+  }
+
+  /** The lantern's color eases toward the place's: amber at home (gold once the zoo is complete), each place's own away. */
+  private tint(canvas: ShadowCanvas, place: Place, dt: number): void {
+    const target = place.id === 'home' && this.golden ? GOLD : place.light;
+    if (!this.warm) this.warm = [target[0], target[1], target[2]];
+    const k = Math.min(1, dt * 1.5);
+    for (let i = 0; i < 3; i++) this.warm[i] += (target[i] - this.warm[i]) * k;
+    canvas.setWarm(this.warm[0], this.warm[1], this.warm[2]);
+  }
+
+  /** Snow and Moon dust glint in the light; rain and blowing sand cast thin streaks of shadow. */
+  private drawWeather(canvas: ShadowCanvas, place: Place): void {
+    const w = this.weather;
+    const m = this.magnification;
+    for (let i = 0; i < w.count; i++) {
+      if (!w.lit(i, this.pool)) continue;
+      const x = w.x[i];
+      const y = w.y[i];
+      if (w.kind === 'snow') canvas.addDot(x, y, 0.0024 * m, CH_GLOW, 0.75);
+      else if (w.kind === 'dust') canvas.addDot(x, y, 0.0012 * m, CH_GLOW, 0.5);
+      else {
+        const [vx, vy] = w.velocity(i, this.pool, place.rules.wind);
+        const s = w.kind === 'rain' ? 0.03 : 0.045;
+        canvas.addCapsule(x, y, 0.0006 * m, x - vx * s, y - vy * s, 0.0004 * m, CH_SHADOW, w.kind === 'rain' ? 0.3 : 0.22);
+      }
+    }
+  }
+
+  /** On the globe, a small light shows where each hand's pinch will land, so places can be aimed at. */
+  private drawPinchCursors(canvas: ShadowCanvas): void {
+    const r = this.session.tour.view(this.pool).r;
+    for (const hand of this.hands) {
+      if (!hand.tracked) continue;
+      canvas.addDot(hand.pinchX, hand.pinchY, r * 0.025, CH_GLOW, 0.95);
+      canvas.addDot(hand.pinchX, hand.pinchY, r * 0.06, CH_GLOW, 0.25);
+    }
+  }
+
+  /** The World Tour's globe: an ocean of light, land in dots of shadow, glowing places, home's lantern and the Moon. */
+  private drawGlobe(canvas: ShadowCanvas): void {
+    const tour = this.session.tour;
+    const view = tour.view(this.pool);
+    const { cx, cy, r } = view;
+    canvas.addDot(cx, cy, r, CH_GLOW, 0.1);
+    const rim = r * 0.012;
+    for (let i = 0; i < 48; i++) {
+      const a0 = (i / 48) * Math.PI * 2;
+      const a1 = ((i + 1) / 48) * Math.PI * 2;
+      canvas.addCapsule(cx + Math.cos(a0) * r, cy + Math.sin(a0) * r, rim, cx + Math.cos(a1) * r, cy + Math.sin(a1) * r, rim, CH_SHADOW, 0.45);
+    }
+    // Land dots shrink and fade toward the rim, so the globe reads as round.
+    const p = this.globePoint;
+    const dot = r * 0.036;
+    for (const d of GLOBE_DOTS) {
+      projectGlobe(d.lat, d.lon, view, p);
+      if (p.depth > 0) canvas.addDot(p.x, p.y, dot * (0.5 + 0.5 * p.depth), CH_SHADOW, 0.5 + 0.45 * p.depth);
+    }
+    const { place: here, stamps } = this.session.saves.data;
+    for (const mk of tour.markers(this.pool)) {
+      if (!mk.visible) continue;
+      const hovered = mk.id === tour.hover;
+      const pulse = 0.7 + 0.3 * Math.sin(this.time * 3.2 + mk.x * 17);
+      let size: number;
+      if (mk.id === 'moon') {
+        size = r * 0.17;
+        canvas.addDot(mk.x, mk.y, size, CH_GLOW, hovered ? 0.85 : 0.55);
+        canvas.addDot(mk.x - size * 0.3, mk.y + size * 0.25, size * 0.22, CH_SHADOW, 0.35);
+        canvas.addDot(mk.x + size * 0.35, mk.y - size * 0.1, size * 0.16, CH_SHADOW, 0.3);
+        canvas.addDot(mk.x - size * 0.05, mk.y - size * 0.4, size * 0.12, CH_SHADOW, 0.3);
+      } else {
+        size = r * (hovered ? 0.075 : 0.05) * (mk.id === 'home' ? 1.3 : 0.6 + 0.4 * mk.facing);
+        canvas.addDot(mk.x, mk.y, size, CH_GLOW, mk.id === here ? 1 : pulse);
+        canvas.addDot(mk.x, mk.y, size * 2.6, CH_GLOW, (hovered ? 0.35 : 0.16) * pulse);
+      }
+      // A stamped place wears a thin ring of shadow, like the edge of a passport stamp.
+      if (stamps.includes(mk.id)) {
+        const ring = size * 1.7;
+        for (let i = 0; i < 10; i++) {
+          const a0 = (i / 10) * Math.PI * 2;
+          const a1 = ((i + 0.6) / 10) * Math.PI * 2;
+          canvas.addCapsule(mk.x + Math.cos(a0) * ring, mk.y + Math.sin(a0) * ring, rim * 0.7, mk.x + Math.cos(a1) * ring, mk.y + Math.sin(a1) * ring, rim * 0.7, CH_SHADOW, 0.5);
+        }
+      }
+    }
   }
 
   /** The glowing ghost hand demonstrates a shape; a two-handed shape gets both hands, where the pair puts them. */
@@ -132,7 +238,6 @@ export class GameSystem extends createSystem({}) {
   private light(canvas: ShadowCanvas): void {
     this.golden = this.session.complete;
     canvas.setLight(0.24 + 0.015 * Math.min(8, this.session.saves.data.streak) + (this.golden ? 0.04 : 0));
-    canvas.setGolden(this.golden);
   }
 
   /**

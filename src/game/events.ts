@@ -1,4 +1,5 @@
 import type { CreatureId } from '../core/library.js';
+import type { PlaceId } from '../core/world.js';
 
 /** Things that happened this frame; positions are stage coordinates (meters). */
 export type GameEvent =
@@ -17,7 +18,13 @@ export type GameEvent =
   /** A tumbling creature landed hard and sits dizzy. */
   | { readonly type: 'land'; readonly species: CreatureId; readonly x: number; readonly y: number }
   /** The player clapped and the whole zoo jumped. */
-  | { readonly type: 'clap'; readonly x: number; readonly y: number };
+  | { readonly type: 'clap'; readonly x: number; readonly y: number }
+  /** The World Tour's globe opened on the wall. */
+  | { readonly type: 'globe'; readonly x: number; readonly y: number }
+  /** The zoo traveled to a place. */
+  | { readonly type: 'travel'; readonly place: PlaceId; readonly x: number; readonly y: number }
+  /** A first visit earned a passport stamp. */
+  | { readonly type: 'stamp'; readonly place: PlaceId; readonly x: number; readonly y: number };
 
 /** A visitor that matched: where its shadow was and how big. */
 export interface Revealed {

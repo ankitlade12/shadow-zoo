@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Creature, groundY, type CreatureEvent } from '../../src/core/creature.js';
 import type { Motion } from '../../src/core/library.js';
 import { mulberry32 } from '../../src/core/rng.js';
+import { HOME_RULES, placeOf, type Rules } from '../../src/core/world.js';
 
 const pool = { u: 0.7, v: 0.5 };
 const run = (c: Creature, seconds: number, events: CreatureEvent[] = []) => {
@@ -102,5 +103,50 @@ describe('Creature tumbling', () => {
     expect(c.grab()).toBe(false);
     expect(c.knock(1, 1, pool)).toBe(false);
     expect(c.mode).toBe('appear');
+  });
+});
+
+describe('Creature tumbling around the world', () => {
+  /** Knocks a settled walker and follows it until it is back on its feet: time aloft, distance, highest bounce. */
+  const flight = (rules: Rules, vx: number, vy: number) => {
+    const c = settled('trot');
+    c.x = -0.2;
+    c.knock(vx, vy, pool);
+    const x0 = c.x;
+    let airborne = 0;
+    let bounces = 0;
+    let peak = 0;
+    let wasRising = vy > 0;
+    let t = 0;
+    for (; t < 12 && c.mode === 'tumble'; t += 1 / 60) {
+      const before = c.vy;
+      c.update(1 / 60, pool, [], rules);
+      if (c.y > groundY(pool) + 0.002) airborne += 1 / 60;
+      if (before < 0 && c.vy > 0) {
+        bounces++;
+        wasRising = true;
+      }
+      if (bounces === 1 && wasRising) peak = Math.max(peak, c.y - groundY(pool));
+    }
+    return { airborne, travelled: Math.abs(c.x - x0), peak, x: c.x, x0, time: t };
+  };
+
+  it('on the Moon a thrown creature floats far longer than at home', () => {
+    expect(flight(placeOf('moon').rules, 0.2, 0.8).airborne).toBeGreaterThan(flight(HOME_RULES, 0.2, 0.8).airborne * 3);
+  });
+
+  it('on Arctic ice it slides on after landing instead of stopping', () => {
+    const ice = flight(placeOf('arctic').rules, 0.6, 0.3);
+    const home = flight(HOME_RULES, 0.6, 0.3);
+    expect(ice.time).toBeGreaterThan(home.time + 0.5);
+  });
+
+  it('in the Sahara the wind carries a creature knocked straight up toward the east', () => {
+    const windy = flight(placeOf('sahara').rules, 0, 1);
+    expect(windy.x).toBeGreaterThan(windy.x0 + 0.02);
+  });
+
+  it('in the Outback it bounces higher', () => {
+    expect(flight(placeOf('outback').rules, 0, 1.4).peak).toBeGreaterThan(flight(HOME_RULES, 0, 1.4).peak * 2);
   });
 });
