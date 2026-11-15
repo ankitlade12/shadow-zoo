@@ -26,6 +26,10 @@ Shadow puppets are the oldest mixed reality there is: a light, a wall and your h
 
 ## Screenshots
 
+![The homepage: a night atlas of the world's shadow zoos](docs/gallery/12-homepage.png)
+
+The homepage is a night atlas: spin the globe, pick a zoo, watch its rule play out live in its legend, and light the lantern there.
+
 | | |
 |---|---|
 | ![Light the lantern](docs/gallery/02-lantern.png) | ![It comes alive](docs/gallery/03-rabbit.png) |
@@ -39,11 +43,11 @@ Shadow puppets are the oldest mixed reality there is: a light, a wall and your h
 | ![Travel the world](docs/gallery/10-world-tour.png) | ![Every zoo, its own rules](docs/gallery/11-sahara.png) |
 | World tour: spin the globe on your wall and pinch a place to take your zoo there. | In the Sahara the light turns orange, sand blows and the wind carries everything east. |
 
-The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking.
+The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking. The homepage capture is of this site.
 
 ## How it plays
 
-1. **Light the lantern.** The game finds the wall you face and lights a warm pool on it.
+1. **Pick a zoo and light the lantern.** The homepage is a night atlas: spin its globe and pick a zoo, then light the lantern. The game finds the wall you face and lights a warm pool on it, in that zoo's light.
 2. **Make the shape.** A glowing outline appears. Shape your hand until its shadow fits, and the creature wriggles free. There are seven to discover: rabbit, dog, crocodile, peacock, spider, turtle, and the bird, which takes both hands.
 3. **Play with them.**
    - **Feed:** pinch to release a firefly.
@@ -52,7 +56,7 @@ The first nine screenshots are taken from the demo video and the last two from t
    - **Grab and throw:** pinch a creature to pick it up. It dangles and protests in its own voice; let go mid-swing and it flies.
    - **Bonk:** swipe fast and your shadow knocks creatures flying. A flying creature knocks the ones it hits, the combos get called out ("Double bonk!", "Zoo-quake!"), and everyone lands dizzy.
    - **Clap:** the whole zoo jumps.
-4. **Travel the world.** Open the Menu and pick World tour: a globe of light and shadow appears on your wall. Spin it with a pinch, and pinch a place to take your zoo there. Every zoo has its own light, weather, night sounds and rules:
+4. **Travel the world.** Pick a zoo on the homepage's globe before you start, or open the Menu and pick World tour: a globe of light and shadow appears on your wall. Spin it with a pinch, and pinch a place to take your zoo there. Every zoo has its own light, weather, night sounds and rules:
    - **The Arctic:** icy blue light and snow. Thrown creatures slide on the ice.
    - **The Sahara:** a deep orange glow and blowing sand. The wind carries everything east.
    - **The Amazon:** green light, rain and frogs. Every pinch releases a swarm of fireflies.
@@ -74,6 +78,7 @@ The first nine screenshots are taken from the demo video and the last two from t
 | Wearing | When your shadow matches a creature you've found, you wear it; closing its jaw (or ears, legs or head) gives it a voice. | [Puppeteer.ts](src/game/Puppeteer.ts), [puppet.ts](src/core/puppet.ts) |
 | World Tour | The globe is drawn on the wall: land as dots of shadow from a 5-degree grid of Natural Earth's coastlines, projected orthographically and tipped toward you. The pinch point (between thumb and index tips) hovers, spins and picks. Each place sets the lantern's color, the weather, the ambience and the physics rules (gravity, bounce, ice, wind and fireflies per pinch). The place and passport stamps are saved. | [world.ts](src/core/world.ts), [Tour.ts](src/game/Tour.ts), [weather.ts](src/core/weather.ts) |
 | Chaos | After the first-time tutorial, a pinch on a creature picks it up and letting go throws it with your fingertip's speed. A fast hand shadow knocks creatures flying, and a flying creature passes part of its speed to the ones it hits, so pile-ups always settle. Creatures tumble under gravity, bounce off the edge of the light and land dizzy. A clap (palms meeting right after being apart) makes everyone jump. | [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [interact.ts](src/core/interact.ts) |
+| Homepage | A night atlas of the world's shadow zoos, built on the same Natural Earth globe and spun by mouse, touch or keyboard. Picking a zoo turns the globe to it, and its legend plays the zoo's rule live with the game's own physics and weather; the game then starts in that zoo. The passport shows the stamps saved in this browser. | [atlas.ts](src/ui/atlas.ts), [landing.ts](src/ui/landing.ts) |
 | Progress | Guided first visitors, stars, the zoo row, the finale, the streak and daily twists, saved to the device. | [Progression.ts](src/game/Progression.ts), [rewards.ts](src/game/rewards.ts), [daily.ts](src/core/daily.ts), [save.ts](src/core/save.ts), [Session.ts](src/game/Session.ts) |
 | Teaching | Short captions and a glowing ghost hand that demonstrates each shape, including both hands for the bird. | [Onboarding.ts](src/game/Onboarding.ts), [GhostHand.ts](src/render/GhostHand.ts) |
 | Menu | A chip on the wall opens a panel near you: assist level, hand, sound, reduced motion, a narrow view for Meta VR Glasses, Re-light and Reset. It's operated by pointing and pinching. | [MenuSystem.ts](src/systems/MenuSystem.ts), [menu.uikitml](public/ui/menu.uikitml), [Settings.ts](src/game/Settings.ts) |
@@ -86,7 +91,7 @@ The first nine screenshots are taken from the demo video and the last two from t
 
 1. Open https://ankitlade12.github.io/shadow-zoo/ in Meta Quest Browser.
 2. Sit facing a wall in a lit room and put your controllers down.
-3. Press **Light the lantern**, and allow hand tracking and spatial data when asked.
+3. Pick a zoo on the globe (or stay home), press **Light the lantern**, and allow hand tracking and spatial data when asked.
 4. A rabbit outline appears within a few seconds. Make the rabbit (index and middle fingers up, the others folded) and it comes alive. The captions take it from there.
 5. After the first creatures, try the wild side: pinch a creature to throw it, swipe fast to bonk, clap. Then open the **Menu** chip on the wall and pick **World tour** to take your zoo to the Arctic, the Sahara, the Amazon, the Outback or the Moon.
 
@@ -94,7 +99,7 @@ The first nine screenshots are taken from the demo video and the last two from t
 
 Open the same link in Chrome, Edge, Safari or Firefox.
 
-- **Real hands:** press **Light the lantern, with my real hands** and hold a hand up to your camera. Make a V for the rabbit. The camera picture stays on your device.
+- **Real hands:** pick a zoo, press **Light the lantern** (*with my real hands, through the camera*) and hold a hand up to your camera. Make a V for the rabbit. The camera picture stays on your device.
 - **Mouse:** press **or play with the mouse**. Move the mouse to move your shadow and press **1** to **7** to make the shapes: 1 is the rabbit, and 7 is the two-handed bird. Click to pinch (hold the click on a creature to carry it, and let go mid-swing to throw it), hold Space to snap a worn creature's jaw, and scroll for a bigger shadow. Click the **Menu** chip for **World tour**. **Esc** leaves.
 
 ## How Shadow Zoo meets the judging criteria
@@ -119,12 +124,12 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 
 - WebXR hand tracking (all 25 joints, with radii) and plane detection through the Immersive Web SDK, with semantic wall labels when available.
 - It's built to hold up in rooms we never tested: it prefers real walls by size and label, ignores pictures and windows, and falls back to a paper screen.
-- It's light enough for standalone hardware: one instanced mask pass of at most 1,024 capsules, one composite quad, one 64-point dust draw, and no image or audio files to load.
-- There are 188 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
+- It's light enough for standalone hardware: one instanced mask pass of at most 1,024 capsules, one composite quad, one 64-point dust draw, and no image or audio files for the game to load.
+- There are 245 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
 
 ### Polish and presentation
 
-- One art direction throughout: warm candlelight, soft shadows, cream type, and the same lantern glow from the landing page to the finale.
+- Handcrafted throughout: the homepage is an explorer's night atlas, engraved in gold and lit by one lantern, and the game is warm candlelight and soft shadows on your own wall, from the first rabbit to the golden finale.
 - Sound is synthesized and placed in space: crickets from the wall, a voice for each creature, chirps for fireflies.
 - The demo video is real gameplay with captions.
 
@@ -153,7 +158,7 @@ Requires Node 20.19+, 22.12+ or 24+.
 ```bash
 npm install
 npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
-npm test             # 237 tests (Vitest)
+npm test             # 245 tests (Vitest)
 npm run typecheck
 npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
 ```
@@ -183,8 +188,10 @@ src/
   audio/       the Web Audio engine and synthesized sound recipes
   systems/     IWSDK ECS systems: hands, stage, menu, game, render, sound, desktop preview
   preview/     desktop preview: browser check, emulator, mouse controls, camera hands
-  ui/          the landing page
+  ui/          the homepage: the atlas (globe, zoos, live legends, passport) and the start buttons
 public/ui/     the menu (UIKitML)
+public/fonts/  the homepage's typefaces and their licenses
+public/plates/ the homepage's screenshots
 tests/         Vitest suite
 scripts/       emulator drill and the demo video pipeline
 docs/gallery/  screenshots from the demo video

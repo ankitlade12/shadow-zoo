@@ -249,4 +249,37 @@ describe('Session World Tour', () => {
     expect(session.saves.data.place).toBe('moon');
     expect(session.zoo.rules).toBe(placeOf('moon').rules);
   });
+
+  it('starts in the zoo chosen on the homepage, arriving once the wall is lit', () => {
+    const session = returning();
+    const events: GameEvent[] = [];
+    session.startAt('sahara');
+    // Nothing moves until the game runs on the wall, so the arrival is heard there.
+    expect(session.saves.data.place).toBe('home');
+    const view = session.update(1 / 30, [hand(null)], projector, pool, events);
+    expect(view.caption).toBe(placeOf('sahara').arrival);
+    expect(session.saves.data.place).toBe('sahara');
+    expect(session.saves.data.stamps).toEqual(['sahara']);
+    expect(session.zoo.rules).toBe(placeOf('sahara').rules);
+    run(session, 1, [hand(null)], events);
+    expect(events.filter((e) => e.type === 'travel')).toHaveLength(1);
+    expect(events.filter((e) => e.type === 'stamp')).toHaveLength(1);
+  });
+
+  it('starting in the zoo it is already in changes nothing', () => {
+    const session = returning('moon', ['moon']);
+    const events: GameEvent[] = [];
+    session.startAt('moon');
+    run(session, 1, [hand(null)], events);
+    expect(events.some((e) => e.type === 'travel' || e.type === 'stamp')).toBe(false);
+    expect(session.saves.data.stamps).toEqual(['moon']);
+  });
+
+  it('a first-time player who starts somewhere new arrives there, then meets the rabbit', () => {
+    const session = new Session(shapes, sil, new MemoryStorage(), at('2026-11-10'), mulberry32(2));
+    session.onStage(pool, 1);
+    session.startAt('amazon');
+    expect(run(session, 0.5, [hand('dog')]).caption).toBe(placeOf('amazon').arrival);
+    expect(run(session, 7, [hand('dog')]).caption).toBe('Make a rabbit with your hand');
+  });
 });

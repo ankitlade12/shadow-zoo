@@ -1,6 +1,8 @@
 import { VisibilityState, type World } from '@iwsdk/core';
+import type { PlaceId } from '../core/world.js';
 import type { XRMode } from '../preview/detect.js';
 import type { PreviewControls } from '../preview/overlay.js';
+import { store } from '../runtime/store.js';
 
 const NOTES: Record<XRMode, string> = {
   native: 'Made for Meta Quest 3 and 3S. Hands only, seated.',
@@ -18,6 +20,16 @@ const FAILED: Record<XRMode, string> = {
 };
 const NO_PREVIEW = "This browser can't run the desktop preview. Try a current Chrome, Edge or Firefox, or open the page in Meta Quest Browser.";
 
+/** How the start plaque names each zoo: "Light the lantern in the Sahara". */
+export const PLACE_PHRASE: Readonly<Record<PlaceId, string>> = {
+  home: 'at home',
+  arctic: 'in the Arctic',
+  sahara: 'in the Sahara',
+  amazon: 'in the Amazon',
+  outback: 'in the Outback',
+  moon: 'on the Moon',
+};
+
 const elements = () => ({
   landing: document.getElementById('landing'),
   start: document.getElementById('start') as HTMLButtonElement | null,
@@ -27,20 +39,56 @@ const elements = () => ({
 
 const canOpenCamera = (): boolean => typeof navigator.mediaDevices?.getUserMedia === 'function';
 
+/** The zoo the game starts in, and whether real hands through the camera lead (the mouse second). */
+let zoo: PlaceId = 'home';
+let cameraFirst = false;
+
+/** The chosen zoo's seal for the start plaque: its glyph, taken from its cartouche on the atlas. */
+function seal(): HTMLSpanElement {
+  const mark = document.createElement('span');
+  mark.className = 'seal';
+  mark.setAttribute('aria-hidden', 'true');
+  const glyph = document.querySelector(`label.zoo[data-place="${zoo}"] svg`);
+  if (glyph) mark.append(glyph.cloneNode(true));
+  return mark;
+}
+
+/** Names the chosen zoo on the start buttons, sealed with its glyph. */
+function label(): void {
+  const { start, startCamera } = elements();
+  const light = (): HTMLSpanElement => {
+    const text = document.createElement('span');
+    text.textContent = `Light the lantern ${PLACE_PHRASE[zoo]}`;
+    return text;
+  };
+  if (startCamera) {
+    const how = document.createElement('small');
+    how.textContent = 'with my real hands, through the camera';
+    // The space keeps the two lines apart in the button's accessible name.
+    startCamera.replaceChildren(seal(), light(), ' ', how);
+  }
+  if (!start) return;
+  if (cameraFirst) start.textContent = 'or play with the mouse';
+  else start.replaceChildren(seal(), light());
+}
+
+/** The zoo chosen on the atlas: the game starts there. */
+export function setLandingZoo(id: PlaceId): void {
+  zoo = id;
+  label();
+}
+
 /** Shows how this browser will play while the world loads; the start buttons wait for the world. */
 export function prepareLanding(mode: XRMode): void {
   const { start, startCamera, support } = elements();
   document.body.dataset.xr = mode;
-  const camera = mode === 'preview' && canOpenCamera();
-  if (start) {
-    start.disabled = true;
-    start.textContent = camera ? 'or play with the mouse' : 'Light the lantern';
-  }
+  cameraFirst = mode === 'preview' && canOpenCamera();
+  if (start) start.disabled = true;
   if (startCamera) {
     startCamera.disabled = true;
-    startCamera.hidden = !camera;
-    startCamera.innerHTML = 'Light the lantern<small>with my real hands</small>';
+    startCamera.hidden = !cameraFirst;
   }
+  label();
   if (support) support.textContent = mode === 'preview' ? LOADING : NOTES[mode];
 }
 
@@ -52,8 +100,8 @@ export function previewUnavailable(): void {
 }
 
 /**
- * Shows the 2D welcome page outside XR and starts the session from its buttons, saying so if it
- * can't. In the desktop preview, `controls` offers real hands through the camera first.
+ * Shows the 2D homepage outside XR and starts the session from its buttons in the zoo chosen on the
+ * atlas, saying so if it can't. In the desktop preview, `controls` offers real hands through the camera first.
  */
 export function mountLanding(world: World, mode: XRMode, controls?: PreviewControls): void {
   const { landing, start, startCamera, support } = elements();
@@ -66,6 +114,7 @@ export function mountLanding(world: World, mode: XRMode, controls?: PreviewContr
   if (support) support.textContent = mode === 'preview' && camera ? PREVIEW_WITH_CAMERA : NOTES[mode];
   const launch = (): void => {
     if (world.session || world.sessionRequestPending) return;
+    store.session?.startAt(zoo);
     try {
       world.launchXR();
     } catch (error) {
@@ -77,6 +126,7 @@ export function mountLanding(world: World, mode: XRMode, controls?: PreviewContr
   };
   start.disabled = false;
   start.addEventListener('click', launch);
+  cameraFirst = !!(startCamera && controls && camera);
   if (startCamera && controls && camera) {
     startCamera.hidden = false;
     startCamera.disabled = false;
@@ -84,10 +134,8 @@ export function mountLanding(world: World, mode: XRMode, controls?: PreviewContr
       launch();
       void controls.useCamera();
     });
-  } else if (startCamera) {
-    startCamera.hidden = true;
-    start.textContent = 'Light the lantern';
-  }
+  } else if (startCamera) startCamera.hidden = true;
+  label();
 }
 
 /** Waits for a session request to settle; true when a session started. */

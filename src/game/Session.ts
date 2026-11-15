@@ -72,6 +72,8 @@ export class Session {
   private followUp: string | null = null;
   private stepTime = 0;
   private lastStep: Step;
+  /** The zoo the homepage chose, travelled to once the game runs on the wall. */
+  private startPlace: PlaceId | null = null;
 
   constructor(
     private readonly shapes: ReadonlyMap<CreatureId, CreatureShape>,
@@ -123,7 +125,20 @@ export class Session {
     });
   }
 
+  /**
+   * Starts the game in the zoo chosen on the homepage. The zoo travels there on the first frame on the
+   * wall, so the arrival (and any new passport stamp) is seen and heard there; if it is there already,
+   * nothing changes.
+   */
+  startAt(id: PlaceId): void {
+    this.startPlace = id;
+  }
+
   update(dt: number, hands: readonly HandShadow[], projector: ShadowProjector, pool: Pool, events: GameEvent[]): SessionView {
+    if (this.startPlace) {
+      if (this.startPlace !== this.saves.data.place) this.travel(this.startPlace, events);
+      this.startPlace = null;
+    }
     const active = this.activeHands(hands);
     this.progression.tick(dt);
     this.updateTimers(dt, active);

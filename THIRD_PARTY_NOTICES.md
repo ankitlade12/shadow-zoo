@@ -10,5 +10,9 @@ Shadow Zoo is MIT licensed (see [LICENSE](LICENSE)). The published site also bun
 | [pmndrs uikit](https://github.com/pmndrs/uikit) | the in-game menu | MIT |
 | [MediaPipe Tasks Vision](https://github.com/google-ai-edge/mediapipe) (`@mediapipe/tasks-vision`) and its [hand landmarker model](https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker) | camera hand tracking in the desktop preview | Apache License 2.0 |
 | [Natural Earth](https://www.naturalearthdata.com/) 1:110m land polygons | the World Tour globe's land, rasterized to a 5-degree grid in [world.ts](src/core/world.ts) | Public domain |
+| [IM Fell English](https://github.com/google/fonts/tree/main/ofl/imfellenglish) by Igino Marini | the homepage's display type | SIL Open Font License 1.1 |
+| [EB Garamond](https://github.com/octaviopardo/EBGaramond12) by Georg Duffner and Octavio Pardo | the homepage's text type | SIL Open Font License 1.1 |
 
 The Apache License 2.0 is available at https://www.apache.org/licenses/LICENSE-2.0. The MediaPipe engine (`vision_wasm_internal.*`) and the model (`hand_landmarker.task`) are redistributed unmodified.
+
+The two typefaces are self-hosted from [public/fonts](public/fonts), subset to Latin and converted to WOFF2; their licenses ship beside them.

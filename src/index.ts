@@ -1,4 +1,4 @@
-import { World, type WorldOptions } from '@iwsdk/core';
+import { VisibilityState, World, type WorldOptions } from '@iwsdk/core';
 import projectOptions from 'virtual:iwsdk-project';
 import { detectXRMode } from './preview/detect.js';
 import { startEmulator } from './preview/emulator.js';
@@ -11,9 +11,12 @@ import { MenuSystem } from './systems/MenuSystem.js';
 import { PreviewSystem } from './systems/PreviewSystem.js';
 import { RenderSystem } from './systems/RenderSystem.js';
 import { StageSystem } from './systems/StageSystem.js';
-import { mountLanding, prepareLanding, previewUnavailable } from './ui/landing.js';
+import { mountAtlas } from './ui/atlas.js';
+import { mountLanding, prepareLanding, previewUnavailable, setLandingZoo } from './ui/landing.js';
 
 async function main(): Promise<void> {
+  // The atlas works at once, while the world loads: turn the globe, pick a zoo.
+  const atlas = mountAtlas(setLandingZoo);
   let mode = await detectXRMode();
   prepareLanding(mode);
   let options: WorldOptions = projectOptions;
@@ -43,6 +46,15 @@ async function main(): Promise<void> {
     controls = mountPreviewControls(world);
   }
   mountLanding(world, mode, controls);
+  // Back from a game, the atlas shows where the zoo is now and the passport's new stamps.
+  let away = false;
+  world.visibilityState.subscribe((state) => {
+    if (state !== VisibilityState.NonImmersive) away = true;
+    else if (away) {
+      away = false;
+      atlas?.refresh();
+    }
+  });
 }
 
 void main();

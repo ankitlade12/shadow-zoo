@@ -5,18 +5,83 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Make shadow puppets with your hands on your real wall, and watch them come alive. A hands-first mixed reality game for Meta Quest."
+      content="Make shadow animals with your hands on your real wall and watch them come alive. Spin the globe, pick a zoo (the Arctic, the Sahara, the Amazon, the Outback or the Moon) and light the lantern there. A hands-only mixed reality game for Meta Quest, with a desktop preview."
     />
-    <meta name="theme-color" content="#1b120c" />
-    <link rel="icon" href="data:," />
+    <meta name="theme-color" content="#1a0f08" />
+    <meta name="color-scheme" content="dark" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2313203d'/%3E%3Cg fill='none' stroke='%23ecd08a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.5 8a3.5 3.5 0 0 1 7 0'/%3E%3Cpath d='M10 10.5h12'/%3E%3Cpath d='M11.5 10.5v11a2.5 2.5 0 0 0 2.5 2.5h4a2.5 2.5 0 0 0 2.5-2.5v-11'/%3E%3C/g%3E%3Cpath d='M16 14c1.8 1.8 2.2 3.4 0 5.4-2.2-2-1.8-3.6 0-5.4z' fill='%23ffb35c'/%3E%3C/svg%3E"
+    />
+    <link rel="preload" href="/fonts/im-fell-english.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/eb-garamond.woff2" as="font" type="font/woff2" crossorigin />
     <title>Shadow Zoo</title>
     <style>
+      @font-face {
+        font-family: 'IM Fell English';
+        src: url('/fonts/im-fell-english.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'IM Fell English';
+        src: url('/fonts/im-fell-english-italic.woff2') format('woff2');
+        font-weight: 400;
+        font-style: italic;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/eb-garamond.woff2') format('woff2');
+        font-weight: 400 800;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'EB Garamond';
+        src: url('/fonts/eb-garamond-italic.woff2') format('woff2');
+        font-weight: 400 800;
+        font-style: italic;
+        font-display: swap;
+      }
+      /* The chosen zoo's wash: the page's single accent, eased when it changes. */
+      @property --zoo {
+        syntax: '<color>';
+        inherits: true;
+        initial-value: #f2a65a;
+      }
       :root {
+        /* The game's own overlays (desktop preview bar, camera view) keep their look. */
         --ink: #ffe9c7;
         --muted: #d9c3a3;
         --glow: #ffc27a;
         --bg0: #120c08;
         --bg1: #2a1a10;
+
+        /* The atlas desk: walnut under one lantern, indigo night sheets engraved in gold. */
+        --walnut-deep: #140b06;
+        --walnut: #2a190e;
+        --night-deep: #0b1329;
+        --night: #13203d;
+        --night-lit: #1f3262;
+        --gold: #c9a24a;
+        --gold-bright: #ecd08a;
+        --gold-dim: #8c6c2c;
+        --hair: rgba(201, 162, 74, 0.1);
+        --rule: rgba(201, 162, 74, 0.34);
+        --vellum: #eadfc4;
+        --vellum-dim: #bfb294;
+        --ink-dark: #22140a;
+        --leaf-hi: #e6bd68;
+        --leaf: #d4a24c;
+        --zoo: #f2a65a;
+        --display: 'IM Fell English', 'Iowan Old Style', Georgia, serif;
+        --text: 'EB Garamond', 'Iowan Old Style', Georgia, serif;
+        /* The graticule: the sheets' hairline grid, and the layout's unit. */
+        --cell: 64px;
+        --desk-pad: clamp(14px, 2.2vw, 32px);
+        --ease: cubic-bezier(0.16, 1, 0.3, 1);
       }
       html,
       body {
@@ -30,143 +95,908 @@
         position: fixed;
         inset: 0;
       }
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* ---------- The desk ---------- */
       #landing {
         position: fixed;
         inset: 0;
-        display: grid;
-        place-items: center;
-        padding: 24px;
-        box-sizing: border-box;
-        overflow: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        color: var(--vellum);
+        font-family: var(--text);
+        font-size: 1.1875rem;
+        line-height: 1.55;
+        font-variant-numeric: oldstyle-nums;
+        font-kerning: normal;
+        -webkit-font-smoothing: antialiased;
         background:
-          radial-gradient(60% 50% at 50% 36%, rgba(255, 194, 122, 0.28), rgba(255, 194, 122, 0) 70%),
-          linear-gradient(180deg, var(--bg1), var(--bg0));
+          radial-gradient(62% 50% at 12% -6%, rgba(255, 179, 92, 0.36), rgba(255, 179, 92, 0) 72%),
+          linear-gradient(180deg, var(--walnut) 0%, var(--walnut-deep) 80%);
+        scrollbar-color: var(--gold-dim) var(--walnut-deep);
+        transition: --zoo 700ms var(--ease);
       }
-      #landing[hidden] {
+      #landing[hidden],
+      #landing [hidden] {
         display: none;
       }
-      .card {
-        max-width: 640px;
-        text-align: center;
+      #landing::-webkit-scrollbar {
+        width: 12px;
       }
-      h1 {
-        font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
-        font-weight: 600;
-        font-size: clamp(44px, 9vw, 84px);
-        margin: 0 0 8px;
-        letter-spacing: 0.5px;
-        text-shadow: 0 0 40px rgba(255, 194, 122, 0.35);
+      #landing::-webkit-scrollbar-track {
+        background: var(--walnut-deep);
       }
-      .tagline {
-        font-size: clamp(18px, 3.2vw, 24px);
-        line-height: 1.45;
-        color: var(--muted);
-        margin: 0 auto 28px;
-        max-width: 30ch;
+      #landing::-webkit-scrollbar-thumb {
+        background: var(--gold-dim);
+        border: 3px solid var(--walnut-deep);
+        border-radius: 6px;
       }
-      ol {
-        list-style: none;
-        padding: 0;
-        margin: 0 auto 32px;
+      #landing ::selection {
+        background: var(--zoo);
+        color: var(--ink-dark);
+      }
+      #landing :focus-visible {
+        outline: 2px solid var(--gold-bright);
+        outline-offset: 3px;
+      }
+      #landing a {
+        color: var(--gold-bright);
+        text-decoration-line: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 4px;
+        text-decoration-color: rgba(236, 208, 138, 0.45);
+        transition: text-decoration-color 160ms ease;
+      }
+      #landing a:hover {
+        text-decoration-color: currentColor;
+      }
+      .desk {
+        box-sizing: border-box;
+        max-width: 1560px;
+        margin: 0 auto;
+        padding: var(--desk-pad);
         display: grid;
-        gap: 14px;
-        text-align: left;
-        max-width: 460px;
+        gap: clamp(32px, 4.5vw, 64px);
       }
-      li {
+
+      /* ---------- A night sheet: indigo, graticule, double gold rule ---------- */
+      .sheet {
+        position: relative;
+        box-sizing: border-box;
+        margin: 8px;
+        padding: var(--cell);
+        background:
+          linear-gradient(var(--hair) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+          linear-gradient(90deg, var(--hair) 1px, transparent 1px) 0 0 / var(--cell) var(--cell),
+          radial-gradient(90% 60% at 6% 0%, rgba(255, 179, 92, 0.14), rgba(255, 179, 92, 0) 64%),
+          radial-gradient(130% 110% at 28% 6%, var(--night-lit), var(--night) 50%, var(--night-deep));
+        border: 2px solid var(--gold);
+        box-shadow:
+          0 0 0 6px var(--night),
+          0 0 0 7px var(--gold-dim),
+          0 34px 64px -22px rgba(0, 0, 0, 0.8),
+          0 10px 20px -8px rgba(0, 0, 0, 0.5);
+      }
+      .sheet h2 {
+        margin: 0;
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: clamp(2.25rem, 4.2vw, 3.5rem);
+        line-height: 1;
+        letter-spacing: -0.005em;
+        color: var(--gold-bright);
+        text-wrap: balance;
+      }
+      .lede {
+        max-width: 52ch;
+        margin: 18px 0 0;
+        font-size: 1.3125rem;
+        line-height: 1.5;
+      }
+      .glyph {
+        width: 24px;
+        height: 24px;
+        flex: none;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* ---------- The atlas: the first sheet ---------- */
+      .atlas {
+        min-height: calc(100svh - 2 * var(--desk-pad) - 16px);
+        padding-top: 28px;
+        padding-bottom: 40px;
         display: grid;
-        grid-template-columns: 40px 1fr;
-        gap: 14px;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        /* Spacer rows above and below centre the title and the start beside the map. */
+        grid-template-rows: auto minmax(0, 1fr) auto auto minmax(0, 1fr);
+        grid-template-areas:
+          'mast mast'
+          '. map'
+          'lead map'
+          'act map'
+          '. map';
+        column-gap: 32px;
+      }
+      .masthead {
+        grid-area: mast;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6px 40px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--rule);
+      }
+      .wordmark {
+        margin: 0;
+        font-family: var(--display);
+        font-style: italic;
+        font-size: 1.75rem;
+        line-height: 1;
+        color: var(--gold-bright);
+      }
+      .masthead nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 28px;
+      }
+      #landing .masthead nav a {
+        padding: 6px 0;
+        color: var(--gold);
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.14em;
+        font-size: 1.1875rem;
+        text-decoration-color: transparent;
+      }
+      #landing .masthead nav a:hover {
+        color: var(--gold-bright);
+        text-decoration-color: currentColor;
+      }
+      .lead {
+        grid-area: lead;
+        padding-top: 24px;
+      }
+      .act {
+        grid-area: act;
+        padding-bottom: 24px;
+      }
+      .lead h1 {
+        margin: 0;
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: clamp(3rem, 6.3vw, 6rem);
+        line-height: 0.94;
+        letter-spacing: -0.012em;
+        color: var(--gold-bright);
+      }
+      .promise {
+        max-width: 27ch;
+        margin: 28px 0 36px;
+        font-size: clamp(1.25rem, 1.75vw, 1.5rem);
+        line-height: 1.42;
+        color: var(--vellum);
+      }
+
+      /* The plaque: gold leaf with an engraved rule, sealed in the chosen zoo's wash. The one action. */
+      .plaque {
+        position: relative;
+        display: inline-grid;
+        grid-template-columns: auto minmax(0, 1fr);
         align-items: center;
-        font-size: 18px;
-        line-height: 1.4;
+        justify-items: start;
+        column-gap: 16px;
+        row-gap: 2px;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 16px 32px 18px 18px;
+        border: 0;
+        border-radius: 3px;
+        font-family: var(--display);
+        font-size: clamp(1.375rem, 2vw, 1.75rem);
+        line-height: 1.2;
+        text-align: left;
+        /* Both lines break evenly: no zoo's name left alone on a line. */
+        text-wrap: balance;
+        color: var(--ink-dark);
+        background: linear-gradient(180deg, var(--leaf-hi), var(--leaf));
+        box-shadow:
+          0 12px 26px -8px rgba(0, 0, 0, 0.7),
+          0 2px 4px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+        transition:
+          transform 220ms var(--ease),
+          box-shadow 220ms var(--ease),
+          filter 220ms var(--ease);
       }
-      .n {
-        width: 40px;
-        height: 40px;
+      /* The chosen zoo's seal: its glyph in ink on its wash, double-ringed like a passport stamp. */
+      .seal {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        display: grid;
+        place-items: center;
+        width: 36px;
+        height: 36px;
+        box-sizing: border-box;
+        border: 3px double var(--ink-dark);
+        border-radius: 50%;
+        background: var(--zoo);
+        color: var(--ink-dark);
+      }
+      .seal .glyph {
+        width: 18px;
+        height: 18px;
+        stroke-width: 1.8;
+      }
+      /* An engraved rule inside the leaf. */
+      .plaque::after {
+        content: '';
+        position: absolute;
+        inset: 6px;
+        border: 1px solid rgba(34, 20, 10, 0.28);
+        border-radius: 2px;
+        pointer-events: none;
+      }
+      .plaque small {
+        font-family: var(--text);
+        font-style: italic;
+        font-size: 1.0625rem;
+        line-height: 1.35;
+        color: #2a180b;
+      }
+      .plaque:hover:enabled {
+        transform: translateY(-2px);
+        filter: brightness(1.04);
+        box-shadow:
+          0 18px 32px -8px rgba(0, 0, 0, 0.75),
+          0 3px 6px rgba(0, 0, 0, 0.35);
+      }
+      .plaque:active:enabled {
+        transform: translateY(1px);
+        box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.6);
+      }
+      #landing .plaque:focus-visible {
+        outline-offset: 5px;
+      }
+      .plaque:disabled {
+        cursor: default;
+        filter: saturate(0.45) brightness(0.78);
+      }
+      /* With a camera, real hands lead and the mouse is the quiet second way. */
+      #start-camera:not([hidden]) + #start {
+        display: block;
+        margin-top: 14px;
+        padding: 6px 0;
+        background: none;
+        box-shadow: none;
+        filter: none;
+        font-family: var(--text);
+        font-style: italic;
+        font-size: 1.1875rem;
+        color: var(--gold-bright);
+        text-decoration: underline;
+        text-decoration-thickness: 1px;
+        text-underline-offset: 5px;
+        text-decoration-color: rgba(236, 208, 138, 0.5);
+      }
+      #start-camera:not([hidden]) + #start::after {
+        display: none;
+      }
+      /* A browser that can't play shows no dead button: the note says where to play instead. */
+      body[data-xr='unsupported'] #start {
+        display: none;
+      }
+      #start-camera:not([hidden]) + #start:hover:enabled {
+        transform: none;
+        text-decoration-color: currentColor;
+      }
+      #start-camera:not([hidden]) + #start:disabled {
+        opacity: 0.6;
+      }
+      .note {
+        max-width: 44ch;
+        margin: 20px 0 0;
+        font-size: 1.0625rem;
+        font-style: italic;
+        line-height: 1.5;
+        color: var(--vellum-dim);
+      }
+
+      /* The map: globe, zoo cartouches and the chosen zoo's legend. */
+      .map {
+        grid-area: map;
+        position: relative;
+        align-self: center;
+        aspect-ratio: 1.04;
+        width: 100%;
+      }
+      #globe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        touch-action: pan-y;
+        cursor: grab;
+        --gx: 0.4;
+        --gy: 0.405;
+        --gr: 0.295;
+        --leaders: 1;
+      }
+      #globe[data-over='zoo'] {
+        cursor: pointer;
+      }
+      #globe[data-dragging] {
+        cursor: grabbing;
+      }
+      .zoos {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        min-inline-size: 0;
+        pointer-events: none;
+      }
+      .zoo {
+        position: absolute;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 16px 10px 12px;
+        font-family: var(--display);
+        font-size: 1.1875rem;
+        line-height: 1;
+        white-space: nowrap;
+        color: var(--gold-bright);
+        background: var(--night);
+        border: 1px solid var(--gold);
+        box-shadow:
+          inset 0 0 0 3px var(--night),
+          inset 0 0 0 4px rgba(201, 162, 74, 0.42),
+          0 6px 14px -4px rgba(0, 0, 0, 0.5);
+        cursor: pointer;
+        user-select: none;
+        pointer-events: auto;
+        transition:
+          transform 280ms var(--ease),
+          background-color 280ms var(--ease),
+          color 280ms var(--ease),
+          box-shadow 280ms var(--ease),
+          opacity 280ms var(--ease);
+      }
+      .zoo input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .zoos:has(input:checked) .zoo:not(:has(input:checked)) {
+        opacity: 0.8;
+      }
+      .zoo:hover {
+        opacity: 1;
+        transform: translateY(-2px);
+        border-color: var(--gold-bright);
+      }
+      .zoo:has(input:checked) {
+        opacity: 1;
+        color: var(--ink-dark);
+        background: var(--wash);
+        border-color: var(--gold-bright);
+        transform: translateY(-6px);
+        box-shadow:
+          inset 0 0 0 3px var(--wash),
+          inset 0 0 0 4px rgba(34, 20, 10, 0.32),
+          0 14px 24px -6px rgba(0, 0, 0, 0.6),
+          0 3px 6px rgba(0, 0, 0, 0.3);
+      }
+      .zoo:has(input:focus-visible) {
+        outline: 2px solid var(--gold-bright);
+        outline-offset: 4px;
+      }
+      .zoo[data-place='arctic'] {
+        left: 33%;
+        top: 0;
+      }
+      .zoo[data-place='moon'] {
+        right: 0;
+        top: 5.5%;
+      }
+      .zoo[data-place='amazon'] {
+        left: 0;
+        top: 9%;
+      }
+      .zoo[data-place='sahara'] {
+        right: 0;
+        top: 40%;
+      }
+      .zoo[data-place='home'] {
+        left: 0;
+        top: 70%;
+      }
+      .zoo[data-place='outback'] {
+        left: 27%;
+        top: 85%;
+      }
+
+      /* The legend: an inset box that plays the chosen zoo's rule live. */
+      .legend {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 40%;
+        box-sizing: border-box;
+        padding: 14px 16px 14px;
+        background: rgba(11, 19, 41, 0.94);
+        border: 1px solid var(--gold);
+        box-shadow:
+          inset 0 0 0 4px rgba(11, 19, 41, 0.94),
+          inset 0 0 0 5px rgba(201, 162, 74, 0.38),
+          0 18px 34px -10px rgba(0, 0, 0, 0.7);
+      }
+      .legend-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--zoo);
+      }
+      .legend h2 {
+        font-size: 1.625rem;
+        color: var(--zoo);
+      }
+      .legend-scene {
+        margin: 2px 0 10px;
+        font-size: 1rem;
+        font-style: italic;
+        line-height: 1.35;
+        color: var(--vellum-dim);
+      }
+      #legend-wall {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        cursor: pointer;
+        border: 1px solid rgba(201, 162, 74, 0.5);
+        background: #120c08;
+      }
+      .legend-rule {
+        margin: 10px 0 0;
+        font-size: 1.0625rem;
+        line-height: 1.35;
+      }
+      .legend-foot {
+        margin: 4px 0 0;
+        font-size: 0.9375rem;
+        font-style: italic;
+        line-height: 1.4;
+        color: var(--vellum-dim);
+      }
+
+      /* ---------- How it plays ---------- */
+      .how {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+        gap: var(--cell);
+        align-items: start;
+      }
+      .key {
+        margin: 48px 0 0;
+      }
+      .key > div {
+        padding: 18px 0 20px;
+        border-top: 1px solid var(--rule);
+      }
+      .key > div:last-child {
+        border-bottom: 1px solid var(--rule);
+      }
+      .key dt {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        font-family: var(--display);
+        font-size: 1.5rem;
+        line-height: 1.15;
+        color: var(--gold-bright);
+      }
+      .key dd {
+        margin: 6px 0 0 82px;
+        max-width: 46ch;
+      }
+      .key-glyph {
+        width: 64px;
+        height: 48px;
+        flex: none;
+        color: var(--vellum);
+      }
+      .key-glyph line {
+        stroke: currentColor;
+        stroke-linecap: round;
+      }
+      .plates {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 40px 32px;
+      }
+      .plate {
+        margin: 0;
+      }
+      .plate-major {
+        grid-column: 1 / -1;
+      }
+      .plate img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 3 / 2;
+        border: 1px solid var(--gold);
+        background: var(--night-deep);
+        box-shadow:
+          0 0 0 5px var(--night-deep),
+          0 0 0 6px rgba(201, 162, 74, 0.4),
+          0 20px 34px -14px rgba(0, 0, 0, 0.7);
+      }
+      .plate figcaption {
+        margin-top: 18px;
+        font-size: 1.0625rem;
+        font-style: italic;
+        line-height: 1.4;
+        color: var(--vellum-dim);
+      }
+      .plate figcaption b {
+        font-style: normal;
+        font-weight: 400;
+        font-family: var(--display);
+        font-size: 1.1875rem;
+        color: var(--gold-bright);
+      }
+
+      /* ---------- Passport ---------- */
+      .stamps {
+        list-style: none;
+        margin: var(--cell) 0 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 28px 32px;
+      }
+      .stamp {
+        width: 172px;
+        height: 172px;
+        box-sizing: border-box;
         border-radius: 50%;
         display: grid;
         place-items: center;
-        background: rgba(255, 194, 122, 0.14);
-        color: var(--glow);
-        font-weight: 700;
+        align-content: center;
+        gap: 4px;
+        padding: 10px;
+        text-align: center;
+        color: var(--vellum-dim);
+        border: 2px dashed rgba(201, 162, 74, 0.45);
+        transform: rotate(var(--tilt, -4deg));
       }
-      #start {
-        font: inherit;
-        font-size: 22px;
-        font-weight: 700;
-        color: #26170c;
-        background: var(--glow);
-        border: 0;
-        border-radius: 999px;
-        padding: 18px 40px;
-        min-width: 260px;
-        min-height: 64px;
-        cursor: pointer;
-        transition:
-          transform 0.15s ease,
-          box-shadow 0.3s ease;
+      .stamp .glyph {
+        width: 32px;
+        height: 32px;
       }
-      #start:hover:enabled,
-      #start:focus-visible {
-        transform: translateY(-1px);
-        box-shadow: 0 0 36px 4px rgba(255, 194, 122, 0.45);
-        outline: none;
+      .stamp-name {
+        font-family: var(--display);
+        font-size: 1.3125rem;
+        line-height: 1.05;
       }
-      #start:disabled {
-        opacity: 0.5;
-        cursor: default;
+      .stamp-state {
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.14em;
+        font-size: 1rem;
+        line-height: 1;
       }
-      body[data-xr='preview'] [data-for='headset'],
-      body:not([data-xr='preview']) [data-for='desktop'] {
-        display: none;
+      .stamp[data-visited='true'] {
+        color: var(--wash);
+        border: 4px double var(--wash);
+        background: radial-gradient(circle, color-mix(in srgb, var(--wash) 14%, transparent) 0 62%, transparent 63%);
       }
-      /* Desktop preview with a camera: real hands first, the mouse second. */
-      #start-camera:not([hidden]) + #start {
-        display: block;
-        margin: 14px auto 0;
-        min-width: 0;
-        min-height: 0;
-        padding: 8px 18px;
-        font-size: 16px;
+      .fine {
+        margin: 36px 0 0;
+        font-size: 1rem;
+        font-style: italic;
+        color: var(--vellum-dim);
+      }
+
+      /* ---------- Try it anywhere ---------- */
+      .ways {
+        margin-top: var(--cell);
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: var(--cell);
+      }
+      .ways h3 {
+        margin: 0 0 18px;
+        font-family: var(--display);
+        font-weight: 400;
+        font-size: 1.75rem;
+        line-height: 1.1;
+        color: var(--gold-bright);
+      }
+      .steps {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        counter-reset: step;
+        display: grid;
+        gap: 16px;
+      }
+      .steps li {
+        counter-increment: step;
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        max-width: 50ch;
+      }
+      .steps li::before {
+        content: counter(step);
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--gold);
+        border-radius: 50%;
+        font-family: var(--display);
+        font-size: 1.125rem;
+        line-height: 1;
+        color: var(--gold-bright);
+      }
+      .steps b {
         font-weight: 600;
-        color: var(--glow);
-        background: transparent;
-        text-decoration: underline;
-        text-underline-offset: 4px;
+        color: var(--gold-bright);
       }
-      #start-camera:not([hidden]) + #start:hover:enabled {
-        box-shadow: none;
+
+      /* ---------- The honest part ---------- */
+      .honest {
+        margin: var(--cell) 0 0;
       }
-      #start-camera {
-        font: inherit;
-        font-size: 22px;
-        font-weight: 700;
-        color: #26170c;
-        background: var(--glow);
-        border: 0;
-        border-radius: 999px;
-        padding: 18px 40px;
-        min-width: 260px;
-        min-height: 64px;
-        cursor: pointer;
+      .honest > div {
+        display: grid;
+        grid-template-columns: minmax(0, 14rem) minmax(0, 1fr);
+        gap: 8px 32px;
+        padding: 18px 0 20px;
+        border-top: 1px solid var(--rule);
       }
-      #start-camera:hover:enabled,
-      #start-camera:focus-visible {
-        transform: translateY(-1px);
-        box-shadow: 0 0 36px 4px rgba(255, 194, 122, 0.45);
-        outline: none;
+      .honest > div:last-child {
+        border-bottom: 1px solid var(--rule);
       }
-      #start-camera:disabled {
-        opacity: 0.5;
-        cursor: default;
+      .honest dt {
+        font-family: var(--display);
+        font-size: 1.5rem;
+        line-height: 1.2;
+        color: var(--gold-bright);
       }
-      #start-camera small {
-        display: block;
-        font-size: 14px;
-        font-weight: 600;
-        opacity: 0.75;
+      .honest dd {
+        margin: 0;
+        max-width: 60ch;
       }
+      .links {
+        margin: 36px 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 36px;
+        font-size: 1.25rem;
+      }
+
+      /* ---------- Colophon ---------- */
+      .colophon {
+        max-width: 72ch;
+        margin: 0 auto;
+        padding: 8px 16px 40px;
+        text-align: center;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #dccaa6;
+      }
+      .colophon p {
+        margin: 0 0 8px;
+      }
+
+      /* ---------- Narrower desks: the atlas stacks ---------- */
+      @media (max-width: 1099px) {
+        /* The title beside the start, the map below; reading order stays pick, then light. */
+        .atlas {
+          min-height: 0;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-rows: auto auto auto;
+          grid-template-areas:
+            'mast mast'
+            'lead act'
+            'map map';
+          column-gap: 40px;
+        }
+        .lead,
+        .act {
+          align-self: center;
+          padding: 40px 0 32px;
+        }
+        .promise {
+          margin-bottom: 0;
+        }
+        .map {
+          justify-self: center;
+          max-width: 760px;
+          margin-top: 8px;
+        }
+        .how {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .plates {
+          max-width: 760px;
+        }
+      }
+      /* ---------- Phones ---------- */
+      @media (max-width: 760px) {
+        :root {
+          --cell: 32px;
+          --desk-pad: 10px;
+        }
+        #landing {
+          font-size: 1.125rem;
+        }
+        .sheet {
+          margin: 6px;
+          padding: 24px 18px 30px;
+          box-shadow:
+            0 0 0 4px var(--night),
+            0 0 0 5px var(--gold-dim),
+            0 24px 40px -18px rgba(0, 0, 0, 0.8);
+        }
+        .atlas {
+          display: block;
+          padding-top: 16px;
+        }
+        .masthead {
+          padding-bottom: 10px;
+        }
+        .wordmark {
+          font-size: 1.5rem;
+        }
+        .masthead nav {
+          gap: 0 18px;
+        }
+        #landing .masthead nav a {
+          font-size: 1.0625rem;
+          letter-spacing: 0.1em;
+        }
+        .lead {
+          display: block;
+          padding: 28px 0 0;
+        }
+        .lead h1 {
+          font-size: clamp(2.6rem, 12.5vw, 3.6rem);
+        }
+        .promise {
+          margin: 18px 0 0;
+        }
+        .act {
+          display: block;
+          margin: 28px 0 0;
+          padding: 0;
+        }
+        .act > .note {
+          margin-top: 18px;
+        }
+        .plaque {
+          width: 100%;
+          padding: 14px 20px 16px 14px;
+        }
+        .map {
+          display: grid;
+          gap: 18px;
+          aspect-ratio: auto;
+          margin-top: 16px;
+        }
+        #globe {
+          position: static;
+          height: auto;
+          aspect-ratio: 1.22;
+          --gx: 0.5;
+          --gy: 0.5;
+          --gr: 0.335;
+          --leaders: 0;
+        }
+        .zoos {
+          position: static;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 12px;
+          pointer-events: auto;
+        }
+        .zoo {
+          position: static;
+          justify-content: flex-start;
+          gap: 8px;
+          min-height: 46px;
+          box-sizing: border-box;
+          padding-inline: 10px;
+          font-size: 1.0625rem;
+        }
+        .zoo .glyph {
+          width: 20px;
+          height: 20px;
+        }
+        .zoo:has(input:checked) {
+          transform: translateY(-3px);
+        }
+        .legend {
+          position: static;
+          width: auto;
+        }
+        .key dd {
+          margin-left: 0;
+        }
+        .key-glyph {
+          width: 52px;
+          height: 40px;
+        }
+        .plates {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 32px;
+        }
+        .stamps {
+          justify-content: center;
+          gap: 20px 18px;
+        }
+        .stamp {
+          width: 132px;
+          height: 132px;
+        }
+        .ways {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 40px;
+        }
+        .honest > div {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .links {
+          gap: 10px 24px;
+        }
+      }
+      /* ---------- Small phones: every zoo's name clears its inner rule ---------- */
+      @media (max-width: 400px) {
+        .sheet {
+          padding-inline: 14px;
+        }
+        .zoos {
+          gap: 10px;
+        }
+        .zoo {
+          gap: 7px;
+          padding-inline: 8px;
+          font-size: 1rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #landing,
+        .plaque,
+        .zoo {
+          transition: none;
+        }
+      }
+
+      /* ---------- The game's own overlays (unchanged) ---------- */
       #preview-bar[data-input='mouse'] [data-for-input='camera'],
       #preview-bar[data-input='camera'] [data-for-input='mouse'] {
         display: none;
@@ -311,44 +1141,266 @@
         font-size: 11px;
         padding: 1px 5px;
       }
-      .note {
-        margin-top: 18px;
-        font-size: 15px;
-        color: var(--muted);
-      }
-      .fine {
-        margin-top: 28px;
-        font-size: 13px;
-        color: rgba(217, 195, 163, 0.75);
-      }
-      @media (prefers-reduced-motion: reduce) {
-        #start {
-          transition: none;
-        }
-      }
     </style>
   </head>
   <body>
     <div id="scene-container"></div>
     <main id="landing">
-      <div class="card">
-        <h1>Shadow Zoo</h1>
-        <p class="tagline">Make shadow puppets with your hands on your real wall, and watch them come alive.</p>
-        <ol data-for="headset">
-          <li><span class="n">1</span><span>Sit facing a wall in a lit room and put your controllers down.</span></li>
-          <li><span class="n">2</span><span>Shape your hand until its shadow fits the glowing outline.</span></li>
-          <li><span class="n">3</span><span>Pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
-        </ol>
-        <ol data-for="desktop">
-          <li><span class="n">1</span><span>Hold a hand up to your camera: its shadow falls on the wall of a virtual room.</span></li>
-          <li><span class="n">2</span><span>Shape your hand until its shadow fits the glowing outline.</span></li>
-          <li><span class="n">3</span><span>Pinch for fireflies, rest your shadow to pet, and come back tomorrow.</span></li>
-        </ol>
-        <button id="start-camera" type="button" hidden disabled>Light the lantern</button>
-        <button id="start" type="button" disabled>Light the lantern</button>
-        <p class="note" id="support">Made for Meta Quest 3 and 3S. Hands only, seated.</p>
-        <p class="fine" data-for="desktop">Your camera picture stays on this device: only your hands' shape is used, and nothing is recorded or sent.</p>
-        <p class="fine">Your zoo is saved only on this device. No accounts, no tracking.</p>
+      <div class="desk">
+        <section class="sheet atlas" aria-labelledby="atlas-title">
+          <header class="masthead">
+            <p class="wordmark">Shadow Zoo</p>
+            <nav aria-label="On this page">
+              <a href="#how">How it plays</a>
+              <a href="#passport">Passport</a>
+              <a href="#anywhere">Try it</a>
+              <a href="#honest">The honest part</a>
+            </nav>
+          </header>
+          <div class="lead">
+            <h1 id="atlas-title">The world’s<br />shadow zoos</h1>
+            <p class="promise">Make animals with your hands on your own wall. Pick a zoo on the globe, and they come alive there.</p>
+          </div>
+          <div class="map">
+            <canvas id="globe" role="img" aria-label="A globe of the world’s shadow zoos, with home’s lantern and the Moon beside it. Drag to spin it."></canvas>
+            <fieldset class="zoos">
+              <legend class="visually-hidden">Choose a zoo</legend>
+              <label class="zoo" data-place="home" style="--wash: #f2a65a">
+                <input type="radio" name="zoo" value="home" checked />
+                <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M9.5 4.6a2.5 2.5 0 0 1 5 0" />
+                  <path d="M7.5 7h9" />
+                  <path d="M8.5 7v9.6a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2V7" />
+                  <path d="M12 10.3c1.2 1.3 1.5 2.5 0 3.9-1.5-1.4-1.2-2.6 0-3.9z" />
+                  <path d="M9.5 21h5" />
+                </svg>
+                Home
+              </label>
+              <label class="zoo" data-place="arctic" style="--wash: #9cc9f0">
+                <input type="radio" name="zoo" value="arctic" />
+                <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" />
+                  <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(60 12 12)" />
+                  <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(120 12 12)" />
+                  <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(180 12 12)" />
+                  <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(240 12 12)" />
+                  <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(300 12 12)" />
+                </svg>
+                The Arctic
+              </label>
+              <label class="zoo" data-place="sahara" style="--wash: #e88a3a">
+                <input type="radio" name="zoo" value="sahara" />
+                <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="15" cy="7.8" r="3.2" />
+                  <path d="M2.5 17.2c2.6-3 5.6-3.4 8.5-.6 2.4-2.6 6.4-3 10.5.4" />
+                  <path d="M5 20.6h14" />
+                </svg>
+                The Sahara
+              </label>
+              <label class="zoo" data-place="amazon" style="--wash: #6cc08e">
+                <input type="radio" name="zoo" value="amazon" />
+                <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4.5 19.5C4.5 11 10 5 19.5 4.5c0 9.4-5.8 15-15 15z" />
+                  <path d="M4.5 19.5 14 10" />
+                  <path d="M9.4 14.6h3.8M11.6 12.4V8.8" />
+                </svg>
+                The Amazon
+              </label>
+              <label class="zoo" data-place="outback" style="--wash: #e0683f">
+                <input type="radio" name="zoo" value="outback" />
+                <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="19" cy="7" r="2.4" />
+                  <path d="M2.5 20c1.4-8.4 4.6-8.4 6 0 1-5.4 3.2-5.4 4.2 0 .8-3.6 2.4-6.4 3.9-8.6" />
+                  <path d="M2 20.6h20" />
+                </svg>
+                The Outback
+              </label>
+              <label class="zoo" data-place="moon" style="--wash: #d3dbe9">
+                <input type="radio" name="zoo" value="moon" />
+                <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M15.2 3.7a8.6 8.6 0 1 0 5.1 14.9 7 7 0 0 1-5.1-14.9z" />
+                </svg>
+                The Moon
+              </label>
+            </fieldset>
+            <section class="legend" aria-labelledby="legend-name">
+              <div class="legend-head">
+                <svg id="legend-glyph" class="glyph" viewBox="0 0 24 24" aria-hidden="true"></svg>
+                <h2 id="legend-name">Home</h2>
+              </div>
+              <p class="legend-scene" id="legend-scene">Your own wall in warm lantern light.</p>
+              <canvas id="legend-wall" role="img" aria-label="A rabbit’s shadow tossed on a wall under the rules of home."></canvas>
+              <p class="legend-rule" id="legend-rule">Toss a creature and it tumbles, bounces and lands dizzy.</p>
+              <p class="legend-foot"><span id="legend-hint">Tap the wall to toss the rabbit.</span> <span id="legend-stamp">No stamp here: home is where every trip begins.</span></p>
+              <p class="visually-hidden" id="legend-live" aria-live="polite"></p>
+            </section>
+          </div>
+          <!-- After the map in reading order: pick a zoo, then light the lantern there. -->
+          <div class="act">
+            <button id="start-camera" class="plaque" type="button" hidden disabled>Light the lantern</button>
+            <button id="start" class="plaque" type="button" disabled>Light the lantern</button>
+            <p class="note" id="support">Made for Meta Quest 3 and 3S. Hands only, seated.</p>
+          </div>
+        </section>
+
+        <section class="sheet how" id="how" aria-labelledby="how-title">
+          <div>
+            <h2 id="how-title">How it plays</h2>
+            <p class="lede">A lantern behind you lights the wall you face. Your hands cast the shadows, and the shadows come alive.</p>
+            <dl class="key">
+              <div>
+                <dt><svg class="key-glyph" data-creature="rabbit" aria-hidden="true"></svg>Make the shape</dt>
+                <dd>Shape your hand until its shadow fits the glowing outline, and the creature wriggles free. Seven to find, from the rabbit to the bird that takes both hands.</dd>
+              </div>
+              <div>
+                <dt><svg class="key-glyph" data-creature="turtle" aria-hidden="true"></svg>Feed and pet</dt>
+                <dd>Pinch to release a firefly and your creatures chase it down. Rest your shadow on one to pet it; at three hearts it learns a trick.</dd>
+              </div>
+              <div>
+                <dt><svg class="key-glyph" data-creature="dog" aria-hidden="true"></svg>Wear it</dt>
+                <dd>Make a creature you’ve found and become it. Snap the dog’s jaw and it barks.</dd>
+              </div>
+              <div>
+                <dt><svg class="key-glyph" data-creature="crocodile" aria-hidden="true"></svg>Grab, throw, bonk</dt>
+                <dd>Pinch a creature to pick it up and let go mid-swing to throw it. Swipe fast to bonk the zoo, and clap to make everyone jump.</dd>
+              </div>
+              <div>
+                <dt><svg class="key-glyph" data-creature="bird" aria-hidden="true"></svg>Travel the world</dt>
+                <dd>Pick a zoo on the globe above, or spin the globe on your wall from the Menu. Every place has its own light, weather, night sounds and rules.</dd>
+              </div>
+              <div>
+                <dt><svg class="key-glyph" data-creature="peacock" aria-hidden="true"></svg>Come back tomorrow</dt>
+                <dd>Your zoo remembers you, your streak warms the lantern, and a daily visitor brings a twist.</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="plates">
+              <figure class="plate plate-major">
+                <img src="/plates/rabbit.webp" width="720" height="480" loading="lazy" decoding="async" alt="A rabbit-shaped hand shadow on a living-room wall in warm lantern light, with the caption: Rabbit joins your zoo!" />
+                <figcaption><b>It comes alive.</b> Two fingers up, the others folded: the rabbit joins your zoo.</figcaption>
+              </figure>
+              <figure class="plate">
+                <img src="/plates/wear.webp" width="720" height="480" loading="lazy" decoding="async" alt="A large dog-shaped hand shadow on the wall, with small creature shadows beside it." />
+                <figcaption><b>Wear a creature.</b> Snap the dog’s jaw, and it barks.</figcaption>
+              </figure>
+              <figure class="plate">
+                <img src="/plates/sahara.webp" width="720" height="480" loading="lazy" decoding="async" alt="Creature shadows tumbling across an orange-lit wall in streaks of blowing sand." />
+                <figcaption><b>Every zoo, its own rules.</b> In the Sahara, the wind blows everything east.</figcaption>
+              </figure>
+            </div>
+        </section>
+
+        <section class="sheet" id="passport" aria-labelledby="passport-title">
+          <h2 id="passport-title">Your passport</h2>
+          <p class="lede" id="passport-summary">
+            Your passport is empty. 5 stamps wait around the world: pick a zoo on the globe and light the lantern to earn your first.
+          </p>
+          <ol class="stamps">
+            <li class="stamp" data-stamp="arctic" style="--wash: #9cc9f0; --tilt: -6deg">
+              <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" />
+                <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(60 12 12)" />
+                <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(120 12 12)" />
+                <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(180 12 12)" />
+                <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(240 12 12)" />
+                <path d="M12 12V3.5M9.9 5.6 12 7.6l2.1-2" transform="rotate(300 12 12)" />
+              </svg>
+              <span class="stamp-name">The Arctic</span>
+              <span class="stamp-state">Not yet</span>
+            </li>
+            <li class="stamp" data-stamp="sahara" style="--wash: #e88a3a; --tilt: 4deg">
+              <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="15" cy="7.8" r="3.2" />
+                <path d="M2.5 17.2c2.6-3 5.6-3.4 8.5-.6 2.4-2.6 6.4-3 10.5.4" />
+                <path d="M5 20.6h14" />
+              </svg>
+              <span class="stamp-name">The Sahara</span>
+              <span class="stamp-state">Not yet</span>
+            </li>
+            <li class="stamp" data-stamp="amazon" style="--wash: #6cc08e; --tilt: -2deg">
+              <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4.5 19.5C4.5 11 10 5 19.5 4.5c0 9.4-5.8 15-15 15z" />
+                <path d="M4.5 19.5 14 10" />
+                <path d="M9.4 14.6h3.8M11.6 12.4V8.8" />
+              </svg>
+              <span class="stamp-name">The Amazon</span>
+              <span class="stamp-state">Not yet</span>
+            </li>
+            <li class="stamp" data-stamp="outback" style="--wash: #e0683f; --tilt: 7deg">
+              <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="19" cy="7" r="2.4" />
+                <path d="M2.5 20c1.4-8.4 4.6-8.4 6 0 1-5.4 3.2-5.4 4.2 0 .8-3.6 2.4-6.4 3.9-8.6" />
+                <path d="M2 20.6h20" />
+              </svg>
+              <span class="stamp-name">The Outback</span>
+              <span class="stamp-state">Not yet</span>
+            </li>
+            <li class="stamp" data-stamp="moon" style="--wash: #d3dbe9; --tilt: -4deg">
+              <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15.2 3.7a8.6 8.6 0 1 0 5.1 14.9 7 7 0 0 1-5.1-14.9z" />
+              </svg>
+              <span class="stamp-name">The Moon</span>
+              <span class="stamp-state">Not yet</span>
+            </li>
+          </ol>
+          <p class="fine">Your zoo and passport are saved only in this browser on this device. No accounts, no tracking.</p>
+        </section>
+
+        <section class="sheet" id="anywhere" aria-labelledby="anywhere-title">
+          <h2 id="anywhere-title">Try it anywhere</h2>
+          <p class="lede">One link, nothing to install. The real game is made for a headset; a computer gets a preview.</p>
+          <div class="ways">
+            <div>
+              <h3>On Meta Quest 3 or 3S</h3>
+              <ol class="steps">
+                <li><span>Open this page in Meta Quest Browser.</span></li>
+                <li><span>Sit facing a wall in a lit room and put your controllers down.</span></li>
+                <li><span>Pick a zoo, press <b>Light the lantern</b>, and allow hand tracking and spatial data when asked.</span></li>
+                <li><span>Make the rabbit (index and middle fingers up, the others folded) and it comes alive.</span></li>
+              </ol>
+            </div>
+            <div>
+              <h3>On a computer</h3>
+              <ol class="steps">
+                <li><span>Open this page in Chrome, Edge, Safari or Firefox: a preview of the game runs in Meta’s WebXR emulator, in a virtual living room.</span></li>
+                <li><span>Pick a zoo and light the lantern with your real hands, held up to your camera.</span></li>
+                <li><span>Or play with the mouse: keys <b>1</b> to <b>7</b> make the shapes, a click pinches, and <b>Esc</b> leaves.</span></li>
+              </ol>
+              <p class="fine">Your camera picture stays on this device: only your hands’ shape is used, and nothing is recorded or sent.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="sheet" id="honest" aria-labelledby="honest-title">
+          <h2 id="honest-title">The honest part</h2>
+          <dl class="honest">
+            <div>
+              <dt>Real</dt>
+              <dd>The game and this page. Everything in the pictures and the demo video is real gameplay of this code.</dd>
+            </div>
+            <div>
+              <dt>Emulated</dt>
+              <dd>It was built and tested in Meta’s WebXR emulator, with emulated hand tracking in a virtual living room.</dd>
+            </div>
+            <div>
+              <dt>Not yet verified</dt>
+              <dd>A physical Quest. Real hand-tracking noise, passthrough in real rooms and the frame rate on the headset still need a headset test.</dd>
+            </div>
+          </dl>
+          <p class="links">
+            <a href="https://youtu.be/UDuvUWqNC5c">Watch the demo video</a>
+            <a href="https://github.com/ankitlade12/shadow-zoo">Read the source</a>
+            <a href="https://devpost.com/software/shadow-zoo">The Devpost entry</a>
+          </p>
+        </section>
+
+        <footer class="colophon">
+          <p>Shadow Zoo, an entry for the Meta VR Start Developer Competition 2026, built with Meta’s Immersive Web SDK.</p>
+          <p>
+            Land from Natural Earth (public domain). Set in IM Fell English, digitized by Igino Marini, and EB Garamond by Georg Duffner and Octavio Pardo,
+            both under the SIL Open Font License.
+          </p>
+        </footer>
       </div>
     </main>
     <div id="preview-bar" data-input="mouse" hidden>
