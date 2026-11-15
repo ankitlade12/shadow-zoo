@@ -36,8 +36,10 @@ Shadow puppets are the oldest mixed reality there is: a light, a wall and your h
 | The classic: hook your thumbs, spread your fingers, and the bird takes wing. | Find all seven creatures and the lantern turns gold. |
 | ![Come back tomorrow](docs/gallery/08-welcome.png) | ![No controllers, ever](docs/gallery/09-menu.png) |
 | Your zoo remembers you, and a daily visitor brings a twist. | Even the menu is point and pinch. |
+| ![Travel the world](docs/gallery/10-world-tour.png) | ![Every zoo, its own rules](docs/gallery/11-sahara.png) |
+| World tour: spin the globe on your wall and pinch a place to take your zoo there. | In the Sahara the light turns orange, sand blows and the wind carries everything east. |
 
-All screenshots are taken from the demo video: IWSDK WebXR emulator footage with emulated hand tracking.
+The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking.
 
 ## How it plays
 
