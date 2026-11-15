@@ -1,10 +1,11 @@
 import { Creature, type CreatureEvent, type Pool } from '../core/creature.js';
 import { spreadSpot, zooSize } from '../core/crowd.js';
 import { Fireflies } from '../core/fireflies.js';
-import { capsulesNear } from '../core/interact.js';
+import { capsulesNear, ClapDetector, palmGap } from '../core/interact.js';
 import { J } from '../core/joints.js';
 import type { CreatureId, CreatureShape } from '../core/library.js';
-import { HEART, Particles, SPARK } from '../core/particles.js';
+import { HEART, Particles, SPARK, STAR } from '../core/particles.js';
+import type { Handedness } from '../core/poses.js';
 import type { GameEvent, Revealed } from './events.js';
 import type { HandShadow } from './hands.js';
 import type { Worn } from './Puppeteer.js';
@@ -15,17 +16,44 @@ const PET_MAX_SPEED = 0.9;
 const MAX_BOND = 5;
 /** Creatures that scatter when the player's dog barks. */
 const PREY: ReadonlySet<CreatureId> = new Set<CreatureId>(['rabbit', 'peacock', 'turtle']);
+// Speeds below are in light-pool half-heights per second, so they feel the same on any wall.
+/** A pinch this close to a creature's middle (in its sizes) picks it up. */
+const GRAB_REACH = 0.6;
+/** The fastest a creature can be thrown or knocked. */
+const MAX_FLING = 5;
+/** A release faster than this is a throw, not a drop. */
+const FLING_SPEED = 1.2;
+/** A hand shadow moving faster than this knocks creatures it sweeps through. */
+const SWAT_SPEED = 3;
+const SWAT_GAIN = 0.9;
+/** Every bonk pops a little upward, so even a sideways swipe sends it flying. */
+const SWAT_POP = 0.9;
+/** A tumbling creature faster than this knocks the creatures it flies into. */
+const CHAIN_SPEED = 1.3;
+/** Share of its speed a flying creature passes to the one it hits. Under 1, so every pile-up dies out. */
+const CHAIN_SHARE = 0.6;
+/** Hits within this many seconds of each other build a combo. */
+const COMBO_WINDOW = 1.6;
 
 /** The living zoo: creatures, fireflies, particles and every hand interaction. Pure game logic. */
 export class Zoo {
   readonly creatures: Creature[] = [];
   readonly fireflies = new Fireflies();
   readonly particles = new Particles();
+  /** Grabbing, swatting and clapping. Off while the first-time tutorial teaches feeding and petting. */
+  chaos = false;
+  /** Whether a clap counts (not while the player brings both hands together for a two-handed shape). */
+  clapReady = true;
   private readonly unlockedSet = new Set<CreatureId>();
   private readonly petTimers = new Map<number, number>();
   private readonly creatureEvents: CreatureEvent[] = [];
   /** Restored creatures take their zoo fit at once instead of shrinking into it. */
   private readonly snapFit = new Set<Creature>();
+  /** The creature each hand holds by a pinch. */
+  private readonly held = new Map<Handedness, Creature>();
+  private readonly clap = new ClapDetector();
+  private combo = 0;
+  private comboLeft = 0;
   private nextId = 1;
   private motionScale = 1;
 
@@ -88,8 +116,13 @@ export class Zoo {
 
   update(dt: number, pool: Pool, hands: readonly HandShadow[], worn: Worn | null, events: GameEvent[]): void {
     this.fitToPool(pool);
+    this.carry(hands, pool, events);
     this.feed(hands, worn, pool, events);
     if (worn?.voice) this.onVoice(worn, pool, events);
+    if (this.chaos) {
+      this.swat(hands, pool, events);
+      this.listenForClap(dt, hands, pool, events);
+    }
     this.assignFireflies();
     this.creatureEvents.length = 0;
     for (const creature of this.creatures) {
@@ -97,14 +130,143 @@ export class Zoo {
       this.updatePet(creature, dt, hands, events);
       creature.update(dt, pool, this.creatureEvents);
     }
+    this.collide(pool, events);
     for (const event of this.creatureEvents) {
       const c = event.creature;
+      if (event.type === 'landed') {
+        this.particles.emit(STAR, c.x, c.y + c.size * 0.45, 3, c.size * 0.4, this.rng);
+        events.push({ type: 'land', species: c.species, x: c.x, y: c.y });
+        continue;
+      }
       c.bond = Math.min(MAX_BOND, c.bond + 1);
       this.particles.emit(HEART, c.x, c.y + c.size * 0.4, 2, c.size * 0.5, this.rng);
       events.push({ type: 'eat', species: c.species, x: c.x, y: c.y });
     }
+    this.comboLeft = Math.max(0, this.comboLeft - dt);
+    if (this.comboLeft === 0) this.combo = 0;
     this.fireflies.update(dt, pool);
     this.particles.update(dt);
+  }
+
+  /** The creature a hand holds, if any. */
+  holding(side: Handedness): Creature | null {
+    return this.held.get(side) ?? null;
+  }
+
+  /** Everyone jumps: walkers leap away from the clap and fliers scatter. */
+  thunderclap(x: number, y: number, pool: Pool, events: GameEvent[]): void {
+    for (const c of this.creatures) {
+      if (c.mode === 'appear' || c.mode === 'held') continue;
+      this.freeFirefly(c);
+      const away = c.x >= x ? 1 : -1;
+      c.knock(away * (0.4 + 0.6 * this.rng()) * pool.v, (1.6 + 0.6 * this.rng()) * pool.v, pool);
+    }
+    this.particles.emit(SPARK, x, y, 14, 0.25 * pool.v, this.rng);
+    events.push({ type: 'clap', x, y });
+  }
+
+  /** Held creatures follow their pinch; letting go (or losing the hand) throws them with the fingertip's speed. */
+  private carry(hands: readonly HandShadow[], pool: Pool, events: GameEvent[]): void {
+    for (const [side, c] of this.held) {
+      let hand: HandShadow | null = null;
+      for (const h of hands) if (h.side === side) hand = h;
+      if (hand && hand.tracked && hand.detector.pinched && c.mode === 'held') {
+        c.hold(hand.tipX, hand.tipY - c.size * 0.3);
+        continue;
+      }
+      this.held.delete(side);
+      if (c.mode === 'held') this.fling(c, hand?.tracked ? hand.tipVX : 0, hand?.tracked ? hand.tipVY : 0, pool, events);
+    }
+  }
+
+  private fling(c: Creature, vx: number, vy: number, pool: Pool, events: GameEvent[]): void {
+    const speed = Math.hypot(vx, vy);
+    const k = speed > MAX_FLING * pool.v ? (MAX_FLING * pool.v) / speed : 1;
+    c.knock(vx * k, vy * k, pool);
+    if (speed * k > FLING_SPEED * pool.v) events.push({ type: 'fling', species: c.species, x: c.x, y: c.y });
+  }
+
+  /** The creature nearest a pinch, if the pinch is on it. */
+  private reachable(hand: HandShadow): Creature | null {
+    let best: Creature | null = null;
+    let bestDist = Infinity;
+    for (const c of this.creatures) {
+      if (c.mode === 'appear' || c.mode === 'held') continue;
+      const d = Math.hypot(c.x - hand.tipX, c.y + c.lift - hand.tipY);
+      if (d <= c.size * GRAB_REACH && d < bestDist) {
+        bestDist = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  /** A fast hand shadow knocks every creature it sweeps through, even ones already in the air. */
+  private swat(hands: readonly HandShadow[], pool: Pool, events: GameEvent[]): void {
+    for (const hand of hands) {
+      if (!hand.tracked || this.held.has(hand.side)) continue;
+      const speed = Math.hypot(hand.vx, hand.vy);
+      if (speed < SWAT_SPEED * pool.v) continue;
+      const k = speed > MAX_FLING * pool.v ? (MAX_FLING * pool.v) / speed : 1;
+      for (const c of this.creatures) {
+        if (!c.canBeHit || !capsulesNear(hand.caps, 0, hand.count, c.x, c.y + c.lift, c.size * 0.3)) continue;
+        this.freeFirefly(c);
+        c.knock(hand.vx * SWAT_GAIN * k, hand.vy * SWAT_GAIN * k + SWAT_POP * pool.v, pool);
+        this.bump(c, events);
+      }
+    }
+  }
+
+  /**
+   * A creature flying fast knocks the ones it hits: throw one into the others and they all go. The one
+   * hit flies on along the thrower's path, tipped upward, with only a share of its speed, and the
+   * thrower slows too, so each generation of a pile-up is slower than the last and it always settles.
+   */
+  private collide(pool: Pool, events: GameEvent[]): void {
+    for (const a of this.creatures) {
+      if (a.mode !== 'tumble' || a.speed < CHAIN_SPEED * pool.v) continue;
+      for (const b of this.creatures) {
+        if (b === a || !b.canBeHit) continue;
+        const reach = (a.size + b.size) * 0.4;
+        if (Math.hypot(a.x - b.x, a.y - (b.y + b.lift)) > reach) continue;
+        const share = a.speed * CHAIN_SHARE;
+        const dy = Math.abs(a.vy) + 0.35 * Math.abs(a.vx);
+        const len = Math.hypot(a.vx, dy) || 1;
+        this.freeFirefly(b);
+        b.knock((a.vx / len) * share, (dy / len) * share, pool);
+        a.vx *= 0.5;
+        a.vy *= 0.5;
+        this.bump(b, events);
+        if (a.speed < CHAIN_SPEED * pool.v) break;
+      }
+    }
+  }
+
+  /** A hit: sparks, and the combo grows while hits keep coming. */
+  private bump(c: Creature, events: GameEvent[]): void {
+    this.combo = this.comboLeft > 0 ? this.combo + 1 : 1;
+    this.comboLeft = COMBO_WINDOW;
+    this.particles.emit(SPARK, c.x, c.y, 6, c.size * 0.6, this.rng);
+    events.push({ type: 'bonk', species: c.species, x: c.x, y: c.y, combo: this.combo });
+  }
+
+  private listenForClap(dt: number, hands: readonly HandShadow[], pool: Pool, events: GameEvent[]): void {
+    let a: HandShadow | null = null;
+    let b: HandShadow | null = null;
+    for (const h of hands) {
+      if (!h.tracked || !h.joints) continue;
+      if (!a) a = h;
+      else if (!b) b = h;
+    }
+    const gap = a && b ? palmGap(a.joints!, b.joints!) : Infinity;
+    if (this.clap.update(dt, gap) && this.clapReady && a && b) this.thunderclap((a.palmX + b.palmX) / 2, (a.palmY + b.palmY) / 2, pool, events);
+  }
+
+  /** A creature knocked or picked up mid-chase lets its firefly go, so another creature can catch it. */
+  private freeFirefly(c: Creature): void {
+    if (c.fireflyId < 0) return;
+    const firefly = this.fireflies.get(c.fireflyId);
+    if (firefly) firefly.claimed = false;
   }
 
   /** The more creatures, the smaller each one gets, so a full zoo still reads as six animals. */
@@ -122,9 +284,18 @@ export class Zoo {
     return (a === J.thumbTip && b === J.indexTip) || (a === J.indexTip && b === J.thumbTip);
   }
 
+  /** A pinch on a creature picks it up (once the tutorial is done); a pinch anywhere else releases a firefly. */
   private feed(hands: readonly HandShadow[], worn: Worn | null, pool: Pool, events: GameEvent[]): void {
     for (const hand of hands) {
       if (hand.pinch !== 'start' || this.pinchIsVoice(worn, hand)) continue;
+      const target = this.chaos && !this.held.has(hand.side) ? this.reachable(hand) : null;
+      if (target) {
+        this.freeFirefly(target);
+        target.grab();
+        this.held.set(hand.side, target);
+        events.push({ type: 'grab', species: target.species, x: target.x, y: target.y });
+        continue;
+      }
       const firefly = this.fireflies.spawn(hand.tipX, hand.tipY, pool, this.rng);
       if (!firefly) continue;
       this.particles.emit(SPARK, firefly.x, firefly.y, 5, 0.12, this.rng);

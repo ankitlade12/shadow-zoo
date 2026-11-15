@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { capsulesNear, PinchDetector } from '../../src/core/interact.js';
+import { capsulesNear, ClapDetector, palmGap, PinchDetector } from '../../src/core/interact.js';
+import { J } from '../../src/core/joints.js';
+import { createJointSet } from '../../src/core/poses.js';
 import { buildCreatureShapes } from '../../src/core/library.js';
 import { openness, WEAR_ON, WornState } from '../../src/core/puppet.js';
 import { VoiceLimiter } from '../../src/core/voices.js';
@@ -77,5 +79,37 @@ describe('VoiceLimiter', () => {
     expect(v.allow('b', 0.05, 1)).toBe(true);
     expect(v.allow('c', 0.1, 1)).toBe(false);
     expect(v.allow('c', 1.2, 1)).toBe(true);
+  });
+});
+
+describe('ClapDetector', () => {
+  const feed = (d: ClapDetector, gaps: number[]) => gaps.map((gap) => d.update(1 / 60, gap));
+
+  it('fires once when the palms meet quickly after being apart', () => {
+    const d = new ClapDetector();
+    expect(feed(d, [0.3, 0.25, 0.18, 0.12, 0.06, 0.04, 0.04, 0.05]).filter(Boolean)).toHaveLength(1);
+  });
+
+  it('ignores hands brought together slowly, as when hooking thumbs for the bird', () => {
+    const d = new ClapDetector();
+    const gaps = Array.from({ length: 120 }, (_, i) => 0.3 - (0.26 * i) / 119);
+    expect(feed(d, gaps).some(Boolean)).toBe(false);
+  });
+
+  it('needs the palms apart again before the next clap, and ignores a hand that comes back already touching', () => {
+    const d = new ClapDetector();
+    expect(feed(d, [0.3, 0.05]).some(Boolean)).toBe(true);
+    expect(feed(d, new Array(120).fill(0.05)).some(Boolean)).toBe(false);
+    expect(feed(d, [Infinity, 0.05]).some(Boolean)).toBe(false);
+    expect(feed(d, [0.3, 0.05]).some(Boolean)).toBe(true);
+  });
+});
+
+describe('palmGap', () => {
+  it('measures between the two palms', () => {
+    const a = createJointSet();
+    const b = createJointSet();
+    b.pos.set([0.03, 0.04, 0], J.middleProx * 3);
+    expect(palmGap(a, b)).toBeCloseTo(0.05, 6);
   });
 });

@@ -1,6 +1,6 @@
 import { createSystem, Quaternion, Vector3 } from '@iwsdk/core';
 import { AudioEngine } from '../audio/AudioEngine.js';
-import type { SoundName } from '../audio/recipes.js';
+import type { BonkLevel, SoundName } from '../audio/recipes.js';
 import type { Stage } from '../core/stage.js';
 import type { Vec3 } from '../core/vec.js';
 import type { GameEvent } from '../game/events.js';
@@ -20,6 +20,17 @@ function soundFor(event: GameEvent): SoundName {
       return 'flee';
     case 'firefly':
       return 'firefly';
+    // A grabbed creature protests in its own voice.
+    case 'grab':
+      return `voice-${event.species}`;
+    case 'fling':
+      return 'whoosh';
+    case 'bonk':
+      return `bonk-${Math.min(5, Math.max(1, event.combo)) as BonkLevel}`;
+    case 'land':
+      return 'thud';
+    case 'clap':
+      return 'clap';
   }
 }
 

@@ -47,6 +47,9 @@ All screenshots are taken from the demo video: IWSDK WebXR emulator footage with
    - **Feed:** pinch to release a firefly.
    - **Pet:** rest your shadow on a creature to earn hearts. At three hearts it learns a trick.
    - **Wear:** make the shape of a creature you've found and become it. Snap its jaw and it speaks; the dog's bark scatters the rabbits.
+   - **Grab and throw:** pinch a creature to pick it up. It dangles and protests in its own voice; let go mid-swing and it flies.
+   - **Bonk:** swipe fast and your shadow knocks creatures flying. A flying creature knocks the ones it hits, the combos get called out ("Double bonk!", "Zoo-quake!"), and everyone lands dizzy.
+   - **Clap:** the whole zoo jumps.
 4. **Grow your zoo.** Every match earns up to three stars, and a row of silhouettes on the wall shows who is still missing. Finding the last one sets off a finale and turns the lantern gold.
 5. **Come back tomorrow.** Your zoo is saved on your device, your streak warms the lantern, and a daily visitor brings a twist: a shy one you must hold perfectly still, or a big one that needs your hand closer to the light.
 
@@ -60,6 +63,7 @@ All screenshots are taken from the demo video: IWSDK WebXR emulator footage with
 | Matching | Shadows are normalized for position and size, then scored by overlap plus a 64-direction radial signature that finds the rotation and checks the ears, jaws and legs. A short hold and a gently relaxing threshold keep it fair. Two-handed creatures score both hands together. | [silhouette.ts](src/core/silhouette.ts), [matcher.ts](src/core/matcher.ts), [Visitors.ts](src/game/Visitors.ts) |
 | Creatures | Each creature is itself a hand shadow that blends between a base pose and an action pose, with its own gait: hop, trot, slither, strut, dangle, creep or fly. As the zoo fills, everyone eases to a shared size and spreads out along the ground. | [library.ts](src/core/library.ts), [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [crowd.ts](src/core/crowd.ts) |
 | Wearing | When your shadow matches a creature you've found, you wear it; closing its jaw (or ears, legs or head) gives it a voice. | [Puppeteer.ts](src/game/Puppeteer.ts), [puppet.ts](src/core/puppet.ts) |
+| Chaos | After the first-time tutorial, a pinch on a creature picks it up and letting go throws it with your fingertip's speed. A fast hand shadow knocks creatures flying, and a flying creature passes part of its speed to the ones it hits, so pile-ups always settle. Creatures tumble under gravity, bounce off the edge of the light and land dizzy. A clap (palms meeting right after being apart) makes everyone jump. | [creature.ts](src/core/creature.ts), [Zoo.ts](src/game/Zoo.ts), [interact.ts](src/core/interact.ts) |
 | Progress | Guided first visitors, stars, the zoo row, the finale, the streak and daily twists, saved to the device. | [Progression.ts](src/game/Progression.ts), [rewards.ts](src/game/rewards.ts), [daily.ts](src/core/daily.ts), [save.ts](src/core/save.ts), [Session.ts](src/game/Session.ts) |
 | Teaching | Short captions and a glowing ghost hand that demonstrates each shape, including both hands for the bird. | [Onboarding.ts](src/game/Onboarding.ts), [GhostHand.ts](src/render/GhostHand.ts) |
 | Menu | A chip on the wall opens a panel near you: assist level, hand, sound, reduced motion, a narrow view for Meta VR Glasses, Re-light and Reset. It's operated by pointing and pinching. | [MenuSystem.ts](src/systems/MenuSystem.ts), [menu.uikitml](public/ui/menu.uikitml), [Settings.ts](src/game/Settings.ts) |
@@ -138,7 +142,7 @@ Requires Node 20.19+, 22.12+ or 24+.
 ```bash
 npm install
 npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
-npm test             # 188 tests (Vitest)
+npm test             # 213 tests (Vitest)
 npm run typecheck
 npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
 ```

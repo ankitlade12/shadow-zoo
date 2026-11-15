@@ -4,6 +4,17 @@ import type { SaveData } from '../core/save.js';
 /** A match's stars out of three, as the wall shows them. */
 export const starText = (stars: number): string => '★'.repeat(stars) + '☆'.repeat(Math.max(0, 3 - stars));
 
+/** The callout for hits in quick succession (from the second hit on). */
+export function comboMessage(combo: number): string {
+  if (combo <= 2) return 'Double bonk!';
+  if (combo === 3) return 'Triple bonk!';
+  if (combo === 4) return 'Zoo-quake!';
+  return `Shadow stampede! ×${combo}`;
+}
+
+/** Once the basics are learned, the wild side, one tip at a time. */
+export const CHAOS_TIPS: readonly string[] = ['Pinch a creature to grab it. Now throw it!', 'Swipe fast to bonk them, or clap your hands!'];
+
 /** The line on the wall when a visitor comes alive: who joined (or visited), with the stars it earned. */
 export function revealMessage(name: string, kind: 'new' | 'daily', stars: number, complete: boolean): string {
   if (complete) return `Your zoo is complete! ${starText(stars)}`;

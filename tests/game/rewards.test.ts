@@ -4,7 +4,7 @@ import { mulberry32 } from '../../src/core/rng.js';
 import { freshSave } from '../../src/core/save.js';
 import { Silhouettes } from '../../src/core/silhouette.js';
 import { captionFor } from '../../src/game/Onboarding.js';
-import { revealMessage, starText, zooComplete, zooProgress } from '../../src/game/rewards.js';
+import { CHAOS_TIPS, comboMessage, revealMessage, starText, zooComplete, zooProgress } from '../../src/game/rewards.js';
 import { Zoo } from '../../src/game/Zoo.js';
 
 describe('rewards', () => {
@@ -55,5 +55,18 @@ describe('the finale', () => {
       expect(c.mode).toBe('happy');
       expect(c.spin).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('Chaos callouts', () => {
+  it('names a combo, louder with every hit', () => {
+    expect(comboMessage(2)).toBe('Double bonk!');
+    expect(comboMessage(3)).toBe('Triple bonk!');
+    expect(comboMessage(4)).toBe('Zoo-quake!');
+    expect(comboMessage(7)).toBe('Shadow stampede! ×7');
+  });
+
+  it('keeps every tip short enough for one line on the wall', () => {
+    for (const tip of CHAOS_TIPS) expect(tip.length).toBeLessThanOrEqual(46);
   });
 });

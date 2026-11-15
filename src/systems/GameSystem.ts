@@ -4,7 +4,7 @@ import type { Creature, Pool } from '../core/creature.js';
 import { BONES } from '../core/joints.js';
 import { buildCreatureShapes, canonicalPair, CREATURES, type CreatureDef } from '../core/library.js';
 import { penumbra } from '../core/lantern.js';
-import { HEART } from '../core/particles.js';
+import { HEART, STAR } from '../core/particles.js';
 import { CAPSULE_STRIDE, ShadowProjector } from '../core/projector.js';
 import { mulberry32 } from '../core/rng.js';
 import type { StoragePort } from '../core/save.js';
@@ -185,6 +185,7 @@ export class GameSystem extends createSystem({}) {
     for (let i = 0; i < p.count; i++) {
       const k = p.life[i] / p.max[i];
       if (p.kind[i] === HEART) this.drawHeart(canvas, p.x[i], p.y[i], 0.006 * m, k);
+      else if (p.kind[i] === STAR) this.drawStar(canvas, p.x[i], p.y[i], 0.0055 * m, k, this.time * 5 + i);
       else canvas.addDot(p.x[i], p.y[i], (0.0006 + 0.0024 * k) * m, CH_GLOW, k);
     }
   }
@@ -221,6 +222,15 @@ export class GameSystem extends createSystem({}) {
       const y = Math.sin(theta) * stage.poolV * 0.9;
       canvas.addDot(x, y, 0.0028 * this.magnification, CH_GLOW, 0.75 + 0.25 * Math.sin(this.time * 2 + i));
     }
+  }
+
+  /** Two thin crossed capsules make a twinkling four-point star, turning as it rises. */
+  private drawStar(canvas: ShadowCanvas, x: number, y: number, r: number, alpha: number, turn: number): void {
+    const c = Math.cos(turn) * r;
+    const s = Math.sin(turn) * r;
+    const w = r * 0.17;
+    canvas.addCapsule(x - c, y - s, w, x + c, y + s, w, CH_GLOW, alpha);
+    canvas.addCapsule(x + s, y - c, w, x - s, y + c, w, CH_GLOW, alpha);
   }
 
   /** Two tapered capsules from round lobes to a point make a small heart. */

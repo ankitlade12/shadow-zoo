@@ -19,6 +19,11 @@ export interface HandShadow {
   palmY: number;
   /** Palm shadow speed on the stage (m/s). */
   speed: number;
+  /** Smoothed palm and fingertip shadow velocities on the stage (m/s): a swipe's direction, a throw's. */
+  vx: number;
+  vy: number;
+  tipVX: number;
+  tipVY: number;
   /** How much the lantern magnifies the palm's shadow (1 on the wall); its edge softens with it. */
   magnification: number;
   pinch: 'start' | 'end' | null;
@@ -37,23 +42,33 @@ export const createHandShadow = (side: Handedness): HandShadow => ({
   palmX: 0,
   palmY: 0,
   speed: 0,
+  vx: 0,
+  vy: 0,
+  tipVX: 0,
+  tipVY: 0,
   magnification: 1,
   pinch: null,
   joints: null,
   detector: new PinchDetector(),
 });
 
+/** Time constant (seconds) smoothing shadow velocities: hand tracking updates in steps, not every frame. */
+const VELOCITY_SMOOTHING = 0.06;
+
 /** Projects a tracked hand (or clears it when `joints` is null) and updates its stage features. */
 export function updateHandShadow(hand: HandShadow, joints: JointSet | null, projector: ShadowProjector, dt: number): void {
   const wasTracked = hand.tracked;
   const prevX = hand.palmX;
   const prevY = hand.palmY;
+  const prevTipX = hand.tipX;
+  const prevTipY = hand.tipY;
   hand.count = joints ? projector.projectBones(joints, hand.caps, 0) : 0;
   hand.tracked = hand.count > 0;
   hand.joints = hand.tracked ? joints : null;
   if (!hand.tracked || !joints) {
     hand.drawCount = 0;
     hand.speed = 0;
+    hand.vx = hand.vy = hand.tipVX = hand.tipVY = 0;
     hand.pinch = hand.detector.update(1, false);
     return;
   }
@@ -71,5 +86,12 @@ export function updateHandShadow(hand: HandShadow, joints: JointSet | null, proj
     hand.magnification = projector.t;
   }
   hand.speed = wasTracked && dt > 0 ? Math.hypot(hand.palmX - prevX, hand.palmY - prevY) / dt : 0;
+  if (wasTracked && dt > 0) {
+    const k = 1 - Math.exp(-dt / VELOCITY_SMOOTHING);
+    hand.vx += ((hand.palmX - prevX) / dt - hand.vx) * k;
+    hand.vy += ((hand.palmY - prevY) / dt - hand.vy) * k;
+    hand.tipVX += ((hand.tipX - prevTipX) / dt - hand.tipVX) * k;
+    hand.tipVY += ((hand.tipY - prevTipY) / dt - hand.tipVY) * k;
+  } else hand.vx = hand.vy = hand.tipVX = hand.tipVY = 0;
   hand.pinch = hand.detector.update(jointDistance(joints, J.thumbTip, J.indexTip), true);
 }

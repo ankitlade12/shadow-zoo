@@ -1,5 +1,7 @@
 export const SPARK = 0;
 export const HEART = 1;
+/** Dizzy stars that drift up from a creature that just landed hard. */
+export const STAR = 2;
 
 const CAPACITY = 160;
 
@@ -21,9 +23,10 @@ export class Particles {
       const s = speed * (0.4 + 0.6 * rng());
       this.x[k] = x;
       this.y[k] = y;
-      this.vx[k] = Math.cos(a) * s * (kind === HEART ? 0.4 : 1);
-      this.vy[k] = kind === HEART ? speed * (0.4 + 0.3 * rng()) : Math.sin(a) * s;
-      this.max[k] = this.life[k] = kind === HEART ? 1.4 : 0.7 + 0.4 * rng();
+      // Hearts and stars drift upward; sparks burst every way.
+      this.vx[k] = Math.cos(a) * s * (kind === SPARK ? 1 : 0.4);
+      this.vy[k] = kind === SPARK ? Math.sin(a) * s : speed * (0.4 + 0.3 * rng());
+      this.max[k] = this.life[k] = kind === HEART ? 1.4 : kind === STAR ? 1 : 0.7 + 0.4 * rng();
       this.kind[k] = kind;
     }
   }

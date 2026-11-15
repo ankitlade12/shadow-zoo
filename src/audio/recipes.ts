@@ -1,6 +1,9 @@
 import type { CreatureId } from '../core/library.js';
 
-export type SoundName = 'reveal' | 'firefly' | 'eat' | 'pet' | 'flee' | `voice-${CreatureId}`;
+/** Bonks get higher with every hit in a combo, up to the fifth. */
+export type BonkLevel = 1 | 2 | 3 | 4 | 5;
+
+export type SoundName = 'reveal' | 'firefly' | 'eat' | 'pet' | 'flee' | 'whoosh' | 'thud' | 'clap' | `bonk-${BonkLevel}` | `voice-${CreatureId}`;
 
 interface ToneSpec {
   readonly type: OscillatorType;
@@ -17,6 +20,8 @@ interface NoiseSpec {
   readonly gain: number;
   readonly filter: BiquadFilterType;
   readonly freq: number;
+  /** When set, the filter sweeps from `freq` to this over the sound (a whoosh). */
+  readonly freq1?: number;
   readonly q?: number;
   readonly delay?: number;
 }
@@ -43,6 +48,10 @@ function noise(ctx: AudioContext, out: AudioNode, t0: number, buffer: AudioBuffe
   const filter = ctx.createBiquadFilter();
   filter.type = s.filter;
   filter.frequency.value = s.freq;
+  if (s.freq1) {
+    filter.frequency.setValueAtTime(s.freq, t);
+    filter.frequency.exponentialRampToValueAtTime(s.freq1, t + s.dur);
+  }
   filter.Q.value = s.q ?? 1;
   const g = ctx.createGain();
   g.gain.setValueAtTime(s.gain, t);
@@ -75,6 +84,30 @@ export function playRecipe(name: SoundName, ctx: AudioContext, out: AudioNode, t
     case 'flee':
       tone(ctx, out, t, { type: 'sine', f0: 900, f1: 500, dur: 0.18, gain: 0.08 });
       break;
+    case 'whoosh':
+      noise(ctx, out, t, buffer, { dur: 0.28, gain: 0.16, filter: 'bandpass', freq: 500, freq1: 2600, q: 1.4 });
+      break;
+    case 'thud':
+      tone(ctx, out, t, { type: 'sine', f0: 130, f1: 70, dur: 0.09, gain: 0.14, attack: 0.004 });
+      noise(ctx, out, t, buffer, { dur: 0.05, gain: 0.08, filter: 'lowpass', freq: 450 });
+      break;
+    case 'clap':
+      noise(ctx, out, t, buffer, { dur: 0.09, gain: 0.3, filter: 'highpass', freq: 2500 });
+      noise(ctx, out, t, buffer, { dur: 0.6, gain: 0.32, filter: 'lowpass', freq: 700, delay: 0.03 });
+      tone(ctx, out, t, { type: 'sine', f0: 95, f1: 42, dur: 0.6, gain: 0.32, attack: 0.006, delay: 0.02 });
+      break;
+    case 'bonk-1':
+    case 'bonk-2':
+    case 'bonk-3':
+    case 'bonk-4':
+    case 'bonk-5': {
+      // A cartoon boing, a whole tone higher with every hit in the combo.
+      const f = 210 * 2 ** ((Number(name.slice(5)) - 1) / 6);
+      tone(ctx, out, t, { type: 'sine', f0: f, f1: f * 2.4, dur: 0.16, gain: 0.24, attack: 0.004 });
+      tone(ctx, out, t, { type: 'triangle', f0: f * 1.5, f1: f * 0.9, dur: 0.22, gain: 0.09, delay: 0.05 });
+      noise(ctx, out, t, buffer, { dur: 0.03, gain: 0.16, filter: 'lowpass', freq: 1300 });
+      break;
+    }
     case 'voice-rabbit':
       tone(ctx, out, t, { type: 'sine', f0: 900, f1: 1500, dur: 0.09, gain: 0.18 });
       tone(ctx, out, t, { type: 'sine', f0: 950, f1: 1600, dur: 0.09, gain: 0.15, delay: 0.12 });

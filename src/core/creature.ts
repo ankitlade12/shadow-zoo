@@ -6,10 +6,11 @@ export interface Pool {
   readonly v: number;
 }
 
-export type Mode = 'appear' | 'rest' | 'wander' | 'chase' | 'eat' | 'happy' | 'flee';
+/** 'held' dangles from a pinch, 'tumble' flies after a throw or a bonk, 'dizzy' sits stunned after landing. */
+export type Mode = 'appear' | 'rest' | 'wander' | 'chase' | 'eat' | 'happy' | 'flee' | 'held' | 'tumble' | 'dizzy';
 
 export interface CreatureEvent {
-  readonly type: 'ate';
+  readonly type: 'ate' | 'landed';
   readonly creature: Creature;
 }
 
@@ -19,6 +20,21 @@ const APPEAR_TIME = 0.8;
 const TRICK_TIME = 0.9;
 /** How quickly a creature eases toward its zoo fit (per second). */
 const FIT_RATE = 2.5;
+/** Gravity on a tumbling walker, in light-pool half-heights per second squared (scales with the stage). */
+const GRAVITY = 7;
+/** Share of speed kept when bouncing off the edge of the light, and off the ground. */
+const WALL_BOUNCE = 0.6;
+const GROUND_BOUNCE = 0.42;
+/** Below this falling speed (pool half-heights per second) a walker lands instead of bouncing. */
+const LAND_SPEED = 0.9;
+/** Fliers brake in the air instead of falling, and catch themselves below this speed. */
+const AIR_DRAG = 2.2;
+const AIR_SETTLE = 0.25;
+const DIZZY_TIME = 1.1;
+/** A creature that was just hit can't be hit again for a moment, so one swipe is one bonk. */
+const HIT_COOLDOWN = 0.35;
+/** How quickly a held creature follows the pinch (per second). */
+const HOLD_FOLLOW = 22;
 
 /** Creatures that live off the ground: the spider on its thread and the bird on the wing. */
 export const airborne = (motion: Motion): boolean => motion === 'dangle' || motion === 'fly';
@@ -100,6 +116,15 @@ export class Creature {
   fitTarget = 1;
   /** Chooses where a walker wanders to on the ground line (the zoo spreads them out); jitter is -1..1. */
   pickSpot: ((self: Creature, halfWidth: number, jitter: number) => number) | null = null;
+  /** Velocity while tumbling (stage meters per second). */
+  vx = 0;
+  vy = 0;
+  private spinRate = 0;
+  /** The tumbling roll, eased back upright after landing. */
+  private roll = 0;
+  private hitCooldown = 0;
+  private holdX = 0;
+  private holdY = 0;
   private trickTime = 0;
   private timer = APPEAR_TIME;
   private phase = 0;
@@ -145,7 +170,54 @@ export class Creature {
 
   /** Busy creatures ignore new fireflies and petting. */
   get busy(): boolean {
-    return this.mode === 'appear' || this.mode === 'chase' || this.mode === 'eat' || this.mode === 'flee';
+    return this.mode !== 'rest' && this.mode !== 'wander' && this.mode !== 'happy';
+  }
+
+  /** Whether a swipe or a flying creature can knock it now (even in mid-air: juggling counts). */
+  get canBeHit(): boolean {
+    return this.hitCooldown <= 0 && this.mode !== 'appear' && this.mode !== 'held';
+  }
+
+  /** Tumbling speed (stage meters per second). */
+  get speed(): number {
+    return Math.hypot(this.vx, this.vy);
+  }
+
+  /** Picked up by a pinch: it dangles and kicks until it is let go. */
+  grab(): boolean {
+    if (this.mode === 'appear' || this.mode === 'held') return false;
+    this.mode = 'held';
+    this.holdX = this.x;
+    this.holdY = this.y;
+    this.vx = 0;
+    this.vy = 0;
+    this.fireflyId = -1;
+    this.trickTime = 0;
+    this.roll = 0;
+    return true;
+  }
+
+  /** Where the pinch holds it this frame. */
+  hold(x: number, y: number): void {
+    this.holdX = x;
+    this.holdY = y;
+  }
+
+  /** Sent flying by a throw, a swipe, a flying friend or a clap: it tumbles, bounces and lands dizzy. */
+  knock(vx: number, vy: number, pool: Pool): boolean {
+    if (this.mode === 'appear') return false;
+    this.mode = 'tumble';
+    this.vx = vx;
+    this.vy = vy;
+    this.fireflyId = -1;
+    this.trickTime = 0;
+    this.lift = 0;
+    this.bounce = 1;
+    if (Math.abs(vx) > 0.02) this.facing = vx > 0 ? 1 : -1;
+    // A forward roll, faster for harder hits.
+    this.spinRate = 4 + 2.5 * (Math.hypot(vx, vy) / pool.v);
+    this.hitCooldown = HIT_COOLDOWN;
+    return true;
   }
 
   chase(fireflyId: number, x: number, y: number): void {
@@ -176,7 +248,7 @@ export class Creature {
   }
 
   flee(fromX: number): void {
-    if (this.mode === 'appear' || this.mode === 'eat') return;
+    if (this.mode === 'appear' || this.mode === 'eat' || this.mode === 'held' || this.mode === 'tumble') return;
     this.mode = 'flee';
     this.timer = 1.2;
     this.fleeFrom = fromX;
@@ -185,7 +257,7 @@ export class Creature {
 
   /** The zoo is complete: a happy dance with a trick, whatever its hearts. */
   celebrate(): void {
-    if (this.mode === 'appear') return;
+    if (this.mode === 'appear' || this.mode === 'held' || this.mode === 'tumble') return;
     this.mode = 'happy';
     this.timer = 2;
     this.fireflyId = -1;
@@ -211,6 +283,7 @@ export class Creature {
 
   update(dt: number, pool: Pool, events: CreatureEvent[]): void {
     this.phase += dt;
+    this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     this.blink(dt);
     if (this.trickTime > 0) {
       this.trickTime = Math.max(0, this.trickTime - dt);
@@ -244,6 +317,21 @@ export class Creature {
         this.act = 0.5 + 0.5 * Math.sin(this.phase * 14);
         if (this.timer <= 0) this.settle();
         break;
+      case 'held':
+        this.carry(dt);
+        break;
+      case 'tumble':
+        this.tumble(dt, pool, events);
+        break;
+      case 'dizzy':
+        this.timer -= dt;
+        // Rolls back upright, then wobbles while the stars circle.
+        this.roll += (0 - this.roll) * Math.min(1, dt * 14);
+        this.spin = this.roll + 0.12 * Math.sin(this.phase * 10) * Math.max(0, this.timer / DIZZY_TIME);
+        this.lift = 0;
+        this.act = 0.1;
+        if (this.timer <= 0) this.settle();
+        break;
       default:
         this.move(dt, pool);
     }
@@ -273,6 +361,85 @@ export class Creature {
     this.act = 0;
     this.lift = 0;
     this.fireflyId = -1;
+    this.roll = 0;
+    if (this.trickTime <= 0) this.spin = 0;
+  }
+
+  /** Dangling from the pinch: it follows the hand, swings against the motion and kicks its legs. */
+  private carry(dt: number): void {
+    const k = 1 - Math.exp(-dt * HOLD_FOLLOW);
+    const before = this.x;
+    this.x += (this.holdX - this.x) * k;
+    this.y += (this.holdY - this.y) * k;
+    const vx = dt > 0 ? (this.x - before) / dt : 0;
+    if (Math.abs(vx) > 0.05) this.facing = vx > 0 ? 1 : -1;
+    const tilt = clamp((vx * 0.35) / Math.max(this.size, 0.05), -0.7, 0.7);
+    this.roll += (-this.facing * tilt - this.roll) * Math.min(1, dt * 10);
+    this.spin = this.roll;
+    this.act = 0.5 + 0.5 * Math.sin(this.phase * 18);
+    this.lift = 0;
+  }
+
+  /** Flying through the light: walkers fall and bounce, fliers brake in the air; the light's edge bounces everyone. */
+  private tumble(dt: number, pool: Pool, events: CreatureEvent[]): void {
+    const air = airborne(this.motion);
+    if (air) {
+      const drag = Math.exp(-AIR_DRAG * dt);
+      this.vx *= drag;
+      this.vy *= drag;
+    } else this.vy -= GRAVITY * pool.v * dt;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.roll += this.spinRate * dt;
+    this.spin = this.roll;
+    this.lift = 0;
+    this.act = air ? wingBeat(this.phase, true) : 0.5 + 0.5 * Math.sin(this.phase * 18);
+    const top = 0.85 * pool.v;
+    if (this.y > top) {
+      this.y = top;
+      this.vy = -Math.abs(this.vy) * WALL_BOUNCE;
+    } else if (air && this.y < -top) {
+      this.y = -top;
+      this.vy = Math.abs(this.vy) * WALL_BOUNCE;
+    }
+    const hw = halfWidthAt(pool, this.y);
+    if (this.x > hw) {
+      this.x = hw;
+      this.vx = -Math.abs(this.vx) * WALL_BOUNCE;
+    } else if (this.x < -hw) {
+      this.x = -hw;
+      this.vx = Math.abs(this.vx) * WALL_BOUNCE;
+    }
+    if (air) {
+      if (this.speed < AIR_SETTLE * pool.v) this.recover(false, events);
+      return;
+    }
+    const ground = groundY(pool);
+    if (this.y <= ground && this.vy <= 0) {
+      this.y = ground;
+      if (-this.vy > LAND_SPEED * pool.v) {
+        this.vy = -this.vy * GROUND_BOUNCE;
+        this.vx *= 0.7;
+        this.spinRate *= 0.7;
+      } else this.recover(true, events);
+    }
+  }
+
+  /** Back on its feet (walkers sit dizzy for a moment first). */
+  private recover(dizzy: boolean, events: CreatureEvent[]): void {
+    this.vx = 0;
+    this.vy = 0;
+    this.spinRate = 0;
+    // The nearest upright pose, so it rolls back the short way.
+    this.roll = Math.atan2(Math.sin(this.roll), Math.cos(this.roll));
+    this.spin = this.roll;
+    if (!dizzy) {
+      this.settle();
+      return;
+    }
+    this.mode = 'dizzy';
+    this.timer = DIZZY_TIME;
+    events.push({ type: 'landed', creature: this });
   }
 
   private wander(pool: Pool): void {

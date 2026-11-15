@@ -10,7 +10,7 @@ import type { HandShadow } from './hands.js';
 import { captionFor, Onboarding, showGhost, type CaptionInput, type Step } from './Onboarding.js';
 import { Progression, type VisitorPlan } from './Progression.js';
 import { Puppeteer, type Worn } from './Puppeteer.js';
-import { revealMessage, zooComplete } from './rewards.js';
+import { CHAOS_TIPS, comboMessage, revealMessage, zooComplete } from './rewards.js';
 import { Visitors } from './Visitors.js';
 import { Zoo } from './Zoo.js';
 
@@ -21,6 +21,15 @@ const ONBOARDING_PATIENCE = 20;
 const BIG_FACTOR = 1.3;
 const STEADY_HOLD = 2;
 const REDUCED_MOTION_SCALE = 0.35;
+/** Announcements: news (who joined) outranks a tip, which outranks a combo callout. */
+const NEWS = 3;
+const TIP = 2;
+const CALLOUT = 1;
+const TIP_SECONDS = 4.5;
+const CALLOUT_SECONDS = 1.4;
+/** Quiet seconds before the first tip, and between tips. */
+const TIP_DELAY = 2;
+const TIP_GAP = 12;
 
 export interface SessionView {
   caption: string | null;
@@ -50,6 +59,10 @@ export class Session {
   /** The news of the moment on the wall (who joined, with its stars) and how long it stays. */
   private announce: string | null = null;
   private announceLeft = 0;
+  private announcePriority = 0;
+  /** The chaos tips still to show this session, and the quiet seconds before the next one. */
+  private readonly tips = [...CHAOS_TIPS];
+  private tipWait = TIP_DELAY;
   private stepTime = 0;
   private lastStep: Step;
 
@@ -111,8 +124,11 @@ export class Session {
     if (revealed && this.plan) this.onReveal(revealed, events, pool);
     const worn = this.puppeteer.update(dt, active, this.zoo.unlocked, this.visitors.current?.def.id ?? null, projector);
     const before = events.length;
+    this.zoo.chaos = this.onboarding.step === 'done';
+    this.zoo.clapReady = !(this.visitors.current?.def.pair ?? false);
     this.zoo.update(dt, pool, active, worn, events);
     this.afterZoo(events, before);
+    this.nextTip(dt);
     const input = this.input;
     input.step = this.onboarding.step;
     input.visitor = this.visitors.current?.def.id ?? null;
@@ -181,17 +197,36 @@ export class Session {
     // The last creature found completes the zoo: a finale, and the news stays up a little longer.
     const finished = plan.kind === 'new' && !wasComplete && zooComplete(this.saves.data);
     if (finished) this.zoo.finale(pool);
-    this.announce = revealMessage(this.shapes.get(plan.species)!.def.name, plan.kind, stars, finished);
-    this.announceLeft = finished ? 5 : 3;
+    this.say(revealMessage(this.shapes.get(plan.species)!.def.name, plan.kind, stars, finished), NEWS, finished ? 5 : 3);
     this.onboarding.onReveal();
     this.saves.save();
+  }
+
+  /** Puts a line on the wall for a while, unless something more important is showing. */
+  private say(text: string, priority: number, seconds: number): void {
+    if (this.announceLeft > 0 && priority < this.announcePriority) return;
+    this.announce = text;
+    this.announceLeft = seconds;
+    this.announcePriority = priority;
+  }
+
+  /** After the tutorial, teaches grabbing, then swatting and clapping, in a quiet moment with creatures to play with. */
+  private nextTip(dt: number): void {
+    if (this.tips.length === 0 || this.onboarding.step !== 'done' || this.welcome > 0 || this.zoo.creatures.length === 0) return;
+    if (this.announceLeft > 0) return;
+    this.tipWait -= dt;
+    if (this.tipWait > 0) return;
+    this.say(this.tips.shift()!, TIP, TIP_SECONDS);
+    this.tipWait = TIP_GAP;
   }
 
   private afterZoo(events: readonly GameEvent[], from: number): void {
     let changed = false;
     for (let i = from; i < events.length; i++) {
       const e = events[i];
-      if (e.type === 'eat') {
+      if (e.type === 'bonk' && e.combo >= 2) this.say(comboMessage(e.combo), CALLOUT, CALLOUT_SECONDS);
+      else if (e.type === 'clap') this.say('Thunderclap!', CALLOUT, CALLOUT_SECONDS);
+      else if (e.type === 'eat') {
         this.progression.onEat();
         this.onboarding.onEat();
         changed = true;

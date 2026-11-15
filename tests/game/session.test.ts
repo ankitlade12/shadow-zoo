@@ -6,6 +6,9 @@ import { freshSave, SAVE_KEY, type SaveData, type StoragePort } from '../../src/
 import { Silhouettes } from '../../src/core/silhouette.js';
 import type { GameEvent } from '../../src/game/events.js';
 import { createHandShadow, type HandShadow } from '../../src/game/hands.js';
+import { J } from '../../src/core/joints.js';
+import { createJointSet } from '../../src/core/poses.js';
+import { CHAOS_TIPS } from '../../src/game/rewards.js';
 import { Session } from '../../src/game/Session.js';
 
 const sil = new Silhouettes();
@@ -124,5 +127,55 @@ describe('Session', () => {
     expect(session.visitors.current).toBeNull();
     run(session, 20, [hand(null)]);
     expect(session.visitors.current?.def.id).toBe('bird');
+  });
+});
+
+describe('Session chaos', () => {
+  const returning = () => {
+    const save = freshSave();
+    save.unlocked = ['rabbit', 'dog'];
+    save.streak = 1;
+    save.lastDay = '2026-11-10';
+    const session = new Session(shapes, sil, withSave(save), at('2026-11-10'), mulberry32(4));
+    session.onStage(pool, 1);
+    return session;
+  };
+
+  it('keeps grabbing and its tips for after the tutorial', () => {
+    const session = new Session(shapes, sil, new MemoryStorage(), at('2026-11-10'), mulberry32(1));
+    session.onStage(pool, 1);
+    for (let t = 0; t < 8; t += 1) {
+      const view = run(session, 1, [hand(null)]);
+      expect(CHAOS_TIPS).not.toContain(view.caption);
+    }
+    expect(session.zoo.chaos).toBe(false);
+  });
+
+  it('teaches a returning player to grab, then to swipe and clap, one tip at a time', () => {
+    const session = returning();
+    expect(run(session, 3, [hand(null)]).caption).toBe(CHAOS_TIPS[0]);
+    expect(session.zoo.chaos).toBe(true);
+    expect(run(session, 17, [hand(null)]).caption).toBe(CHAOS_TIPS[1]);
+  });
+
+  it('a clap puts a callout on the wall', () => {
+    const session = returning();
+    const left = createHandShadow('left');
+    const right = createHandShadow('right');
+    for (const h of [left, right]) {
+      h.tracked = true;
+      h.joints = createJointSet();
+    }
+    const gapOf = (gap: number) => {
+      left.joints!.pos[J.middleProx * 3] = -gap / 2;
+      right.joints!.pos[J.middleProx * 3] = gap / 2;
+    };
+    const events: GameEvent[] = [];
+    gapOf(0.3);
+    session.update(1 / 30, [left, right], projector, pool, events);
+    gapOf(0.05);
+    const view = session.update(1 / 30, [left, right], projector, pool, events);
+    expect(events.some((e) => e.type === 'clap')).toBe(true);
+    expect(view.caption).toBe('Thunderclap!');
   });
 });
