@@ -72,6 +72,7 @@
         --rule: rgba(201, 162, 74, 0.34);
         --vellum: #eadfc4;
         --vellum-dim: #bfb294;
+        --desk-ink: #dccaa6;
         --ink-dark: #22140a;
         --leaf-hi: #e6bd68;
         --leaf: #d4a24c;
@@ -356,7 +357,7 @@
         font-style: italic;
         font-size: 1.0625rem;
         line-height: 1.35;
-        color: #2a180b;
+        color: var(--ink-dark);
       }
       .plaque:hover:enabled {
         transform: translateY(-2px);
@@ -488,6 +489,9 @@
       }
       .zoos:has(input:checked) .zoo:not(:has(input:checked)) {
         opacity: 0.8;
+      }
+      .zoos:has(input:checked) .zoo:not(:has(input:checked)):hover {
+        opacity: 1;
       }
       .zoo:hover {
         opacity: 1;
@@ -707,7 +711,8 @@
         line-height: 1;
       }
       .stamp[data-visited='true'] {
-        color: var(--wash);
+        /* Lightened so every zoo's name reads at 4.5:1 or better on its tinted disc. */
+        color: color-mix(in srgb, var(--wash) 72%, #fff);
         border: 4px double var(--wash);
         background: radial-gradient(circle, color-mix(in srgb, var(--wash) 14%, transparent) 0 62%, transparent 63%);
       }
@@ -807,7 +812,7 @@
         text-align: center;
         font-size: 1rem;
         line-height: 1.6;
-        color: #dccaa6;
+        color: var(--desk-ink);
       }
       .colophon p {
         margin: 0 0 8px;
