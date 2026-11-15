@@ -1041,7 +1041,18 @@
         pointer-events: none;
       }
       .walk-top > * {
+        grid-row: 1;
         pointer-events: auto;
+      }
+      /* The zoo's name comes first to a screen reader, and sits between its two buttons on screen. */
+      .walk-top .walk-title {
+        grid-column: 2;
+      }
+      .walk-top [data-walk='back'] {
+        grid-column: 1;
+      }
+      .walk-top [data-walk='sound'] {
+        grid-column: 3;
       }
       .walk-title {
         margin: 0;
@@ -1070,7 +1081,7 @@
           inset 0 0 0 4px rgba(201, 162, 74, 0.4);
         cursor: pointer;
       }
-      .walk-chip:last-child {
+      .walk-top [data-walk='sound'] {
         justify-self: end;
       }
       .walk-chip[aria-pressed='false'] {
@@ -1819,11 +1830,11 @@
       <section id="zoo-walk" class="walk" hidden aria-labelledby="walk-title">
         <canvas id="walk-scene" tabindex="-1" aria-label="A night zoo along a lantern-lit wall: an enclosure for every creature, its shadows living in a pool of light."></canvas>
         <header class="walk-top">
+          <h2 id="walk-title" class="walk-title">The Shadow Zoo</h2>
           <button type="button" class="walk-chip" data-walk="back">
             <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg>
             <span class="walk-chip-label">The atlas</span>
           </button>
-          <h2 id="walk-title" class="walk-title">The Shadow Zoo</h2>
           <button type="button" class="walk-chip" data-walk="sound" aria-pressed="true">
             <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" /><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4" /></svg>
             <span class="walk-chip-label">Sound</span>
