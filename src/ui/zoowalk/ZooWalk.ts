@@ -1,5 +1,6 @@
 import { AudioEngine } from '../../audio/AudioEngine.js';
 import { soundFor } from '../../audio/events.js';
+import type { SoundName } from '../../audio/recipes.js';
 import { groundY, type Creature } from '../../core/creature.js';
 import { buildCreatureShapes, type CreatureId, type CreatureShape } from '../../core/library.js';
 import { SPARK } from '../../core/particles.js';
@@ -139,6 +140,8 @@ export class ZooWalk {
       });
     }
     root.querySelector<HTMLButtonElement>('[data-walk="back"]')?.addEventListener('click', () => this.close());
+    // Development builds let scripts that film the walk find its creatures on screen.
+    if (import.meta.env.DEV) (globalThis as { __zooWalk?: unknown }).__zooWalk = this;
     root.querySelector<HTMLButtonElement>('#walk-start')?.addEventListener('click', () => {
       if (!this.hooks.onStart(this.place)) this.text('walk-note', this.hooks.startNote());
     });
@@ -233,6 +236,21 @@ export class ZooWalk {
   private text(id: string, value: string): void {
     const el = this.root.querySelector(`#${id}`);
     if (el && el.textContent !== value) el.textContent = value;
+  }
+
+  /** Development builds: where each creature of the enclosure nearest the visitor is on screen (CSS pixels). */
+  debugCreatures(): { species: CreatureId; x: number; y: number; mode: string }[] {
+    if (!import.meta.env.DEV) return [];
+    const v = this.view();
+    const here = enclosureAt(this.layout, this.visitorX, 3);
+    const pen = here ? this.penFor(here) : null;
+    if (!pen) return [];
+    return pen.zoo.creatures.map((c) => ({
+      species: c.species,
+      x: v.w / 2 + (pen.enclosure.x + c.x - v.camX) * v.scale,
+      y: v.originY - (this.layout.poolY + c.y + c.lift) * v.scale,
+      mode: c.mode,
+    }));
   }
 
   private view(): View {
@@ -364,7 +382,7 @@ export class ZooWalk {
     if (this.time > 0.35 && this.gate < 1) this.gate = Math.min(1, this.gate + dt / 1.3);
     if (this.gate > 0 && !this.gateHeard) {
       this.gateHeard = true;
-      this.audio.play('gate', [this.layout.gate, 0, 0]);
+      this.play('gate', this.layout.gate, 0);
     }
     this.walk(dt);
     let v = this.view();
@@ -432,6 +450,12 @@ export class ZooWalk {
     }
   }
 
+  /** Plays a sound on the wall; development builds trace it, as the game's sound system does. */
+  private play(sound: SoundName, x: number, y: number): void {
+    this.audio.play(sound, [x, y, 0]);
+    if (import.meta.env.DEV) console.info(`[ShadowZoo] sound ${sound} (walk) @ ${x.toFixed(2)} ${y.toFixed(2)} 0.00`);
+  }
+
   private updatePens(dt: number, v: View): void {
     const half = v.w / 2 / v.scale + 2.5;
     for (const pen of this.pens) {
@@ -441,7 +465,7 @@ export class ZooWalk {
       if (this.assist?.pen === pen && this.helper.shadow.tracked) hands.push(this.helper.shadow);
       pen.zoo.update(dt, this.layout.pool, hands, null, pen.events);
       for (const e of pen.events) {
-        this.audio.play(soundFor(e), [pen.enclosure.x + e.x, this.layout.poolY + e.y, 0]);
+        this.play(soundFor(e), pen.enclosure.x + e.x, this.layout.poolY + e.y);
         if (e.type === 'eat') this.fed.add(pen.enclosure.species);
         else if (e.type === 'pet') this.petted.add(pen.enclosure.species);
         else continue;
@@ -464,7 +488,7 @@ export class ZooWalk {
     if (this.complete || this.fed.size < n || this.petted.size < n) return;
     this.complete = true;
     for (const pen of this.pens) for (const c of pen.zoo.creatures) c.celebrate();
-    this.audio.play('stamp', [this.visitorX, 0, 0]);
+    this.play('stamp', this.visitorX, 0);
     this.shown = '';
   }
 
