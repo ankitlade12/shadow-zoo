@@ -3,7 +3,7 @@ import type { Creature, Pool } from '../../core/creature.js';
 import type { CreatureId, CreatureShape } from '../../core/library.js';
 import { HEART, STAR, type Particles } from '../../core/particles.js';
 import { CAPSULE_STRIDE } from '../../core/projector.js';
-import type { Firefly } from '../../core/fireflies.js';
+import { fireflyGlow, type Firefly } from '../../core/fireflies.js';
 
 /** Where the camera looks: screen pixels per meter, and where the wall's x and y origins land on screen. */
 export interface View {
@@ -163,14 +163,14 @@ export function glow(ctx: CanvasRenderingContext2D, x: number, y: number, r: num
   ctx.fill();
 }
 
-/** Fireflies flicker with a warm halo, as on the game's wall. */
-export function drawFireflies(ctx: CanvasRenderingContext2D, list: readonly Firefly[], ox: number, oy: number, v: View): void {
+/** Fireflies glow and flash with a warm halo, as on the game's wall; `gentle` (reduced motion) keeps the flashes soft. */
+export function drawFireflies(ctx: CanvasRenderingContext2D, list: readonly Firefly[], ox: number, oy: number, v: View, gentle: boolean): void {
   for (const f of list) {
-    const flicker = 0.65 + 0.35 * Math.sin(f.age * 9 + f.seed);
+    const light = fireflyGlow(f, gentle);
     const x = sx(v, ox + f.x);
     const y = sy(v, oy + f.y);
-    glow(ctx, x, y, 0.03 * v.scale, 0.35 * flicker);
-    glow(ctx, x, y, 0.009 * v.scale, flicker, '255,250,220');
+    glow(ctx, x, y, 0.03 * v.scale, 0.35 * light);
+    glow(ctx, x, y, 0.009 * v.scale, light, '255,250,220');
   }
 }
 

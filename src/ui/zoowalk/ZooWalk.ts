@@ -537,7 +537,7 @@ export class ZooWalk {
     }
     this.layer.composite(ctx, this.w, this.h, Math.max(0.6, v.scale * 0.004));
     for (const pen of visible) {
-      drawFireflies(ctx, pen.zoo.fireflies.list, pen.enclosure.x, oy, v);
+      drawFireflies(ctx, pen.zoo.fireflies.list, pen.enclosure.x, oy, v, still);
       drawParticles(ctx, pen.zoo.particles, pen.enclosure.x, oy, v, this.time);
     }
     for (const eye of eyes) glow(ctx, eye.x, eye.y, Math.max(2, 0.008 * v.scale), 1);

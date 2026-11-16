@@ -1,6 +1,7 @@
 import { createSystem } from '@iwsdk/core';
 import { blendCapsules, placeCapsules, placePoint, rotateCapsules, rotatePoint, type Point } from '../core/animate.js';
 import type { Creature, Pool } from '../core/creature.js';
+import { fireflyGlow } from '../core/fireflies.js';
 import { BONES } from '../core/joints.js';
 import { buildCreatureShapes, canonicalPair, CREATURES, type CreatureDef } from '../core/library.js';
 import { penumbra } from '../core/lantern.js';
@@ -282,10 +283,11 @@ export class GameSystem extends createSystem({}) {
     const zoo = this.session.zoo;
     for (const creature of zoo.creatures) this.drawCreature(canvas, creature, stage);
     const m = this.magnification;
+    const gentle = this.session.settings.reducedMotion;
     for (const f of zoo.fireflies.list) {
-      const flicker = 0.65 + 0.35 * Math.sin(f.age * 9 + f.seed);
-      canvas.addDot(f.x, f.y, 0.0034 * m, CH_GLOW, flicker);
-      canvas.addDot(f.x, f.y, 0.009 * m, CH_GLOW, 0.18 * flicker);
+      const glow = fireflyGlow(f, gentle);
+      canvas.addDot(f.x, f.y, 0.0034 * m, CH_GLOW, glow);
+      canvas.addDot(f.x, f.y, 0.009 * m, CH_GLOW, 0.18 * glow);
     }
     const p = zoo.particles;
     for (let i = 0; i < p.count; i++) {
