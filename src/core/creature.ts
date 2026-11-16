@@ -17,6 +17,23 @@ export interface CreatureEvent {
 
 /** Walking speed per motion style, in body sizes per second. */
 const SPEED: Readonly<Record<Motion, number>> = { hop: 1.2, trot: 1.5, slither: 0.8, strut: 0.7, dangle: 0.9, creep: 0.3, fly: 1.4 };
+/** Top speeds, as multiples of walking speed. */
+const CHASE_PACE = 1.7;
+const FLEE_PACE = 2.4;
+/** Seconds to get from a standstill up to top speed, and to brake from top speed to a stop. */
+const START_TIME = 0.45;
+const STOP_TIME = 0.35;
+/** A creature going the wrong way turns round once it has slowed below this pace. */
+const TURN_PACE = 0.15;
+/** Seconds to turn round: the shadow narrows to side-on, then widens facing the other way. */
+const TURN_TIME = 0.25;
+/** A goal this little behind a creature (in its sizes) is not worth turning round for. */
+const TURN_SLACK = 0.05;
+/** How quickly the hop dies away once a creature stops walking (a time constant, seconds). */
+const HOP_FADE = 0.08;
+/** A firefly this close across (in the chaser's sizes) is in reach to eat; a chaser brakes to stop just inside it. */
+const EAT_REACH = 0.3;
+const CHASE_STOP = 0.9 * EAT_REACH;
 const APPEAR_TIME = 0.8;
 const TRICK_TIME = 0.9;
 /** How quickly a creature eases toward its zoo fit (per second). */
@@ -96,7 +113,8 @@ function idleTwitch(t: number, id: number): number {
 /** A living shadow creature on the stage. Pure simulation: no rendering, no IWSDK. */
 export class Creature {
   mode: Mode = 'appear';
-  facing: 1 | -1 = 1;
+  /** The way it is turned to: 1 is right, -1 is left. Its shadow turns to match over a moment (see `facing`). */
+  heading: 1 | -1 = 1;
   /** Height above the path from hops and bobs (stage meters). */
   lift = 0;
   /** Blend 0..1 toward the creature's act pose. */
@@ -130,6 +148,14 @@ export class Creature {
   private trickTime = 0;
   private timer = APPEAR_TIME;
   private phase = 0;
+  /** Walking speed now, as a multiple of its walking speed. */
+  private pace = 0;
+  /** The gait's clock: seconds of walking at walking speed, so it runs on the distance actually walked. */
+  private gait = 0;
+  /** How much of its gait shows (0..1): it follows the walking speed, and dies away after a stop. */
+  private stride = 0;
+  /** Turn about its upright axis: 0 faces right, π faces left. */
+  private yaw = 0;
   private targetX: number;
   private targetY: number;
   private readonly startY: number;
@@ -165,6 +191,15 @@ export class Creature {
     return this.baseSize * this.fit;
   }
 
+  /**
+   * How wide its shadow is cast, and which way: 1 faces right, -1 is mirrored to face left. A body
+   * turning about its upright axis casts a shadow cos(yaw) as wide, so while it turns round this
+   * passes through 0, side-on. Drawing multiplies across by it; `heading` gives the direction.
+   */
+  get facing(): number {
+    return Math.cos(this.yaw);
+  }
+
   /** Where the creature stands, or where it is walking to. */
   get spotX(): number {
     return this.mode === 'wander' ? this.targetX : this.x;
@@ -189,6 +224,7 @@ export class Creature {
   grab(): boolean {
     if (this.mode === 'appear' || this.mode === 'held') return false;
     this.mode = 'held';
+    this.liftOff();
     this.holdX = this.x;
     this.holdY = this.y;
     this.vx = 0;
@@ -209,13 +245,13 @@ export class Creature {
   knock(vx: number, vy: number, pool: Pool): boolean {
     if (this.mode === 'appear') return false;
     this.mode = 'tumble';
+    this.liftOff();
     this.vx = vx;
     this.vy = vy;
     this.fireflyId = -1;
     this.trickTime = 0;
-    this.lift = 0;
     this.bounce = 1;
-    if (Math.abs(vx) > 0.02) this.facing = vx > 0 ? 1 : -1;
+    if (Math.abs(vx) > 0.02) this.heading = vx > 0 ? 1 : -1;
     // A forward roll, faster for harder hits.
     this.spinRate = 4 + 2.5 * (Math.hypot(vx, vy) / pool.v);
     this.hitCooldown = HIT_COOLDOWN;
@@ -236,7 +272,7 @@ export class Creature {
 
   /** Close enough to eat the chased firefly. */
   reached(): boolean {
-    if (Math.abs(this.targetX - this.x) >= this.size * 0.3) return false;
+    if (Math.abs(this.targetX - this.x) >= this.size * EAT_REACH) return false;
     const reachY = this.motion === 'dangle' ? 0.3 : this.motion === 'fly' ? 0.35 : 0.9;
     return Math.abs(this.targetY - this.y) < this.size * reachY;
   }
@@ -284,6 +320,7 @@ export class Creature {
   }
 
   update(dt: number, pool: Pool, events: CreatureEvent[], rules: Rules = HOME_RULES): void {
+    const fromX = this.x;
     this.phase += dt;
     this.hitCooldown = Math.max(0, this.hitCooldown - dt);
     this.blink(dt);
@@ -338,9 +375,42 @@ export class Creature {
         this.move(dt, pool);
     }
     if (this.mode !== 'appear') this.fit += (this.fitTarget - this.fit) * Math.min(1, dt * FIT_RATE);
+    this.keepInside(pool);
+    this.walk(dt, fromX);
     this.lift *= this.motionScale;
     this.bounce = 1 + (this.bounce - 1) * this.motionScale;
-    this.keepInside(pool);
+    this.turn(dt);
+  }
+
+  /**
+   * The gait runs on the distance actually walked this frame (after the light's edge has had its say),
+   * so hops keep their rhythm through every change of speed, shrink as the creature slows, and die
+   * away instead of dropping to the ground when it stops.
+   */
+  private walk(dt: number, fromX: number): void {
+    const walking = this.mode === 'wander' || this.mode === 'chase' || this.mode === 'flee';
+    if (!walking) this.pace = 0;
+    if (airborne(this.motion)) return;
+    const walked = walking ? Math.abs(this.x - fromX) / (SPEED[this.motion] * this.size) : 0;
+    this.gait += walked;
+    const showing = dt > 0 ? Math.min(1, walked / dt) : this.stride;
+    this.stride += (showing - this.stride) * (1 - Math.exp(-dt / HOP_FADE));
+    this.lift += gaitLift(this.motion, this.gait, this.size) * this.stride;
+    if (walking) this.act = gaitAct(this.motion, this.gait) * this.stride;
+  }
+
+  /** Turns about its upright axis toward its heading. */
+  private turn(dt: number): void {
+    const goal = this.heading > 0 ? 0 : Math.PI;
+    const step = (Math.PI / TURN_TIME) * dt;
+    this.yaw += clamp(goal - this.yaw, -step, step);
+  }
+
+  /** Picked up or knocked mid-hop: it leaves from where its shadow is, with no hop left to finish. */
+  private liftOff(): void {
+    this.y += this.lift;
+    this.lift = 0;
+    this.stride = 0;
   }
 
   private appear(dt: number, pool: Pool): void {
@@ -374,9 +444,9 @@ export class Creature {
     this.x += (this.holdX - this.x) * k;
     this.y += (this.holdY - this.y) * k;
     const vx = dt > 0 ? (this.x - before) / dt : 0;
-    if (Math.abs(vx) > 0.05) this.facing = vx > 0 ? 1 : -1;
+    if (Math.abs(vx) > 0.05) this.heading = vx > 0 ? 1 : -1;
     const tilt = clamp((vx * 0.35) / Math.max(this.size, 0.05), -0.7, 0.7);
-    this.roll += (-this.facing * tilt - this.roll) * Math.min(1, dt * 10);
+    this.roll += (-this.heading * tilt - this.roll) * Math.min(1, dt * 10);
     this.spin = this.roll;
     this.act = 0.5 + 0.5 * Math.sin(this.phase * 18);
     this.lift = 0;
@@ -472,10 +542,10 @@ export class Creature {
 
   private move(dt: number, pool: Pool): void {
     let goalX = this.targetX;
-    let mult = 1;
-    if (this.mode === 'chase') mult = 1.7;
+    let top = 1;
+    if (this.mode === 'chase') top = CHASE_PACE;
     else if (this.mode === 'flee') {
-      mult = 2.4;
+      top = FLEE_PACE;
       goalX = this.x + (this.x >= this.fleeFrom ? 1 : -1) * pool.u;
       this.timer -= dt;
       if (this.timer <= 0) {
@@ -483,13 +553,25 @@ export class Creature {
         return;
       }
     }
-    const step = SPEED[this.motion] * this.size * mult * dt;
+    const air = airborne(this.motion);
     const dx = goalX - this.x;
-    this.x += clamp(dx, -step, step);
-    if (Math.abs(dx) > 1e-4) this.facing = dx > 0 ? 1 : -1;
-    if (airborne(this.motion)) {
-      const goalY = this.mode === 'flee' ? 0.5 * pool.v : this.targetY;
-      const dy = goalY - this.y;
+    const dy = air ? (this.mode === 'flee' ? 0.5 * pool.v : this.targetY) - this.y : 0;
+    // Going the wrong way, it slows to a stop before it turns round.
+    let behind = (dx > 0 ? 1 : -1) !== this.heading && Math.abs(dx) > TURN_SLACK * this.size;
+    if (behind && this.pace <= TURN_PACE) {
+      this.heading = dx > 0 ? 1 : -1;
+      behind = false;
+    }
+    let left = Math.max(Math.abs(dx), Math.abs(dy));
+    if (this.mode === 'chase') left = Math.max(0, left - CHASE_STOP * this.size);
+    const walkSpeed = SPEED[this.motion] * this.size;
+    // The fastest it can go and still brake to a stop where it is going.
+    const arrive = Math.sqrt((2 * top * left) / (walkSpeed * STOP_TIME));
+    const want = behind ? 0 : Math.min(top, arrive);
+    this.pace = want > this.pace ? Math.min(want, this.pace + (top / START_TIME) * dt) : Math.max(want, this.pace - (top / STOP_TIME) * dt);
+    const step = this.pace * walkSpeed * dt;
+    this.x += behind ? this.heading * step : clamp(dx, -step, step);
+    if (air) {
       this.y += clamp(dy, -step, step);
       const moving = Math.abs(dx) > 0.004 || Math.abs(dy) > 0.004;
       if (this.motion === 'fly') {
@@ -503,10 +585,9 @@ export class Creature {
       return;
     }
     this.y += (groundY(pool) - this.y) * Math.min(1, dt * 4);
-    const moving = Math.abs(dx) > 0.004;
-    this.lift = moving ? gaitLift(this.motion, this.phase * mult, this.size) : 0;
-    this.act = moving ? gaitAct(this.motion, this.phase) : 0;
-    if (this.mode === 'wander' && !moving) this.settle();
+    // Hops and steps come from the distance walked (see walk).
+    this.lift = 0;
+    if (this.mode === 'wander' && Math.abs(dx) <= 0.004) this.settle();
   }
 
   private blink(dt: number): void {

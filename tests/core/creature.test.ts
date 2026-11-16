@@ -9,6 +9,28 @@ const run = (c: Creature, seconds: number, events: CreatureEvent[] = []) => {
   for (let t = 0; t < seconds; t += 1 / 60) c.update(1 / 60, pool, events);
   return events;
 };
+/** Steps until the creature sets off on a wander (it appears and rests first). */
+const untilWandering = (c: Creature) => {
+  for (let i = 0; i < 600 && c.mode !== 'wander'; i++) c.update(1 / 60, pool, []);
+};
+/** A rabbit hopping steadily left on a long wander, `extra` seconds after it got up to speed. */
+const hoppingLeft = (extra = 0) => {
+  const c = make('hop', 0, 0.2, 4);
+  c.pickSpot = (_self, halfWidth) => -halfWidth;
+  untilWandering(c);
+  run(c, 0.6 + extra);
+  return c;
+};
+/** How high the rabbit's hops reach at a walk. */
+const hopHeight = () => {
+  const c = hoppingLeft();
+  let peak = 0;
+  for (let i = 0; i < 30; i++) {
+    c.update(1 / 60, pool, []);
+    peak = Math.max(peak, c.lift);
+  }
+  return peak;
+};
 
 describe('Creature', () => {
   it('appears with a bounce and settles onto the ground line', () => {
@@ -131,5 +153,72 @@ describe('Creature', () => {
       return max;
     };
     expect(peak(0.35)).toBeLessThan(peak(1) * 0.5);
+  });
+
+  it.each(['chase', 'flee'] as const)('keeps its hop smooth when a walk turns into a %s', (next) => {
+    const height = hopHeight();
+    // Switch at many moments of the hop: none of them may make the shadow jump.
+    let jump = 0;
+    for (let k = 0; k < 12; k++) {
+      const c = hoppingLeft(k * 0.05);
+      const before = c.lift;
+      if (next === 'chase') c.chase(9, c.x - 0.4, groundY(pool));
+      else c.flee(c.x + 0.1);
+      c.update(1 / 60, pool, []);
+      jump = Math.max(jump, Math.abs(c.lift - before));
+    }
+    expect(height).toBeGreaterThan(0.05);
+    expect(jump).toBeLessThan(0.25 * height);
+  });
+
+  it('lands softly when it stops in mid-hop', () => {
+    const height = hopHeight();
+    const c = hoppingLeft();
+    for (let i = 0; i < 60 && c.lift < 0.7 * height; i++) c.update(1 / 60, pool, []);
+    const high = c.lift;
+    expect(high).toBeGreaterThanOrEqual(0.7 * height);
+    c.stay();
+    c.update(1 / 60, pool, []);
+    expect(c.mode).toBe('rest');
+    expect(c.lift).toBeGreaterThan(0.6 * high);
+    run(c, 0.4);
+    expect(c.lift).toBeLessThan(0.05 * high);
+  });
+
+  it('sets off gently and slows down before it stops', () => {
+    const c = make('trot', 0, 0.2, 3);
+    c.pickSpot = (_self, halfWidth) => 0.9 * halfWidth;
+    untilWandering(c);
+    const speeds: number[] = [];
+    while (c.mode === 'wander' && speeds.length < 600) {
+      const x = c.x;
+      c.update(1 / 60, pool, []);
+      speeds.push(Math.abs(c.x - x) * 60);
+    }
+    const top = Math.max(...speeds);
+    expect(speeds[0]).toBeLessThan(0.2 * top);
+    const upToSpeed = speeds.findIndex((s) => s > 0.95 * top) / 60;
+    expect(upToSpeed).toBeGreaterThan(0.3);
+    expect(upToSpeed).toBeLessThan(0.6);
+    const last = speeds.slice(-12);
+    expect(last.reduce((a, b) => a + b, 0) / last.length).toBeLessThan(0.6 * top);
+  });
+
+  it('turns round through side-on instead of flipping its shadow', () => {
+    const c = make('trot');
+    run(c, 1);
+    expect(c.facing).toBe(1);
+    c.chase(9, c.x - 0.4, groundY(pool));
+    const seen = [c.facing];
+    for (let i = 0; i < 60; i++) {
+      c.update(1 / 60, pool, []);
+      seen.push(c.facing);
+    }
+    let biggest = 0;
+    for (let i = 1; i < seen.length; i++) biggest = Math.max(biggest, Math.abs(seen[i] - seen[i - 1]));
+    expect(biggest).toBeLessThan(0.3);
+    expect(Math.min(...seen.map(Math.abs))).toBeLessThan(0.15);
+    expect(seen.filter((f) => Math.abs(f) < 0.95).length).toBeGreaterThanOrEqual(8);
+    expect(seen[seen.length - 1]).toBeCloseTo(-1, 6);
   });
 });

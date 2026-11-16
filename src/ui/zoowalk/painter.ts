@@ -132,7 +132,7 @@ export class CreaturePainter {
     const { cx, cy } = shape.target.frame;
     const y = c.y + c.lift;
     const scale = c.scale * c.bounce;
-    const spin = still ? 0 : -c.facing * c.spin;
+    const spin = still ? 0 : -c.heading * c.spin;
     blendCapsules(shape.caps, shape.actCaps, c.act, shape.count, this.blend);
     placeCapsules(this.blend, shape.count, cx, cy, c.x, y, scale, c.facing, this.placed);
     if (spin !== 0) rotateCapsules(this.placed, shape.count, spin, c.x, y);

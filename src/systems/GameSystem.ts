@@ -301,7 +301,7 @@ export class GameSystem extends createSystem({}) {
     const { cx, cy } = shape.target.frame;
     const y = c.y + c.lift;
     const scale = c.scale * c.bounce;
-    const spin = this.session.settings.reducedMotion ? 0 : -c.facing * c.spin;
+    const spin = this.session.settings.reducedMotion ? 0 : -c.heading * c.spin;
     blendCapsules(shape.caps, shape.actCaps, c.act, shape.count, this.blendBuf);
     placeCapsules(this.blendBuf, shape.count, cx, cy, c.x, y, scale, c.facing, this.drawBuf);
     if (spin !== 0) rotateCapsules(this.drawBuf, shape.count, spin, c.x, y);

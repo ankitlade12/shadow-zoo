@@ -602,7 +602,7 @@ class LegendWall {
     if (resting && !this.greeted) {
       // A chosen zoo's creature first turns toward the page and greets you with a happy hop.
       this.greeted = true;
-      c.facing = -1;
+      c.heading = -1;
       c.pet();
     } else if (resting && this.tosses > 0) {
       this.wait -= dt;
@@ -665,7 +665,7 @@ class LegendWall {
     const c = this.creature;
     const y = c.y + c.lift;
     placeCapsules(this.shape.caps, this.shape.count, this.shape.cx, this.shape.cy, c.x, y, c.scale * c.bounce, c.facing, this.buf);
-    if (!reducedMotion() && c.spin !== 0) rotateCapsules(this.buf, this.shape.count, -c.facing * c.spin, c.x, y);
+    if (!reducedMotion() && c.spin !== 0) rotateCapsules(this.buf, this.shape.count, -c.heading * c.spin, c.x, y);
     ctx.strokeStyle = 'rgba(22,13,7,0.9)';
     ctx.lineCap = 'round';
     for (let i = 0; i < this.shape.count; i++) {
