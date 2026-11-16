@@ -34,6 +34,15 @@ The homepage is a night atlas: spin the globe, pick a zoo, watch its rule play o
 
 Or walk into the zoo right on the page: a night zoo with an enclosure for every creature, where your mouse or finger casts the hand shadow.
 
+**In motion** (real-time loops from the demo video):
+
+| | |
+|---|---|
+| ![A rabbit comes alive](docs/gallery/loops/rabbit-comes-alive.gif) | ![Feeding time](docs/gallery/loops/feeding-time.gif) |
+| Make a rabbit with your hand, and it comes alive. | The keeper rings for feeding time, and fireflies shower down. |
+| ![On the Moon, they float](docs/gallery/loops/moon-float.gif) | ![Walk into a zoo on the page](docs/gallery/loops/walk-into-a-zoo.gif) |
+| On the Moon, a swipe sends the zoo floating. | No headset? Walk into a zoo on the page, and throw a rabbit. |
+
 | | |
 |---|---|
 | ![Light the lantern](docs/gallery/02-lantern.png) | ![It comes alive](docs/gallery/03-rabbit.png) |
@@ -47,7 +56,7 @@ Or walk into the zoo right on the page: a night zoo with an enclosure for every 
 | ![Travel the world](docs/gallery/10-world-tour.png) | ![Every zoo, its own rules](docs/gallery/11-sahara.png) |
 | World tour: spin the globe on your wall and pinch a place to take your zoo there. | In the Sahara the light turns orange, sand blows and the wind carries everything east. |
 
-The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking. The homepage and zoo walk captures are of this site.
+The first nine screenshots are taken from the demo video and the last two from the desktop preview: IWSDK WebXR emulator footage with emulated hand tracking. The homepage and zoo walk captures are of this site. The loops are cut from the demo video: the first three are emulator footage, the last is this site.
 
 ## How it plays
 
@@ -73,6 +82,8 @@ The first nine screenshots are taken from the demo video and the last two from t
 6. **Come back tomorrow.** Your zoo is saved on your device, your streak warms the lantern, and a daily visitor brings a twist: a shy one you must hold perfectly still, or a big one that needs your hand closer to the light.
 
 ## How it works
+
+![How it's built: plane detection finds your room's wall, hand tracking follows all 25 joints of each hand, a virtual lantern casts their shadows, the shape reader turns your silhouette into one of seven animals, and the zoo brings them to life](docs/gallery/14-how-its-built.png)
 
 | Piece | What it does | Where |
 |---|---|---|
