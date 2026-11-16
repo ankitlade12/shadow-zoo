@@ -2,6 +2,7 @@ import type { Vec3 } from '../core/vec.js';
 import { VoiceLimiter } from '../core/voices.js';
 import type { PlaceId } from '../core/world.js';
 import { playRecipe, type SoundName } from './recipes.js';
+import { createRoomEcho } from './room.js';
 
 /** A place's night sounds: gains for each layer (0 leaves it out), and the insects' pitch and chirp rate. */
 interface Ambience {
@@ -27,11 +28,13 @@ export const AMBIENCE: Readonly<Record<PlaceId, Ambience>> = {
   moon: { ...QUIET, hum: 0.018, room: 0.006 },
 };
 
-/** Owns the AudioContext: unlock, master volume, spatial one-shots and the night ambience. */
+/** Owns the AudioContext: unlock, master volume, spatial one-shots in the room's echo, and the night ambience. */
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private buffer: AudioBuffer | null = null;
+  /** The room's echo, which every one-shot also plays into. */
+  private echo: AudioNode | null = null;
   private ambient: { stop(): void } | null = null;
   private readonly limiter = new VoiceLimiter();
   private volume = 0.8;
@@ -56,6 +59,7 @@ export class AudioEngine {
       this.ctx = ctx;
       this.master = master;
       this.buffer = buffer;
+      this.echo = createRoomEcho(ctx, master);
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
   }
@@ -87,9 +91,10 @@ export class AudioEngine {
 
   play(name: SoundName, at: Vec3): void {
     const ctx = this.ctx;
-    if (!ctx || !this.buffer || this.muted || ctx.state !== 'running') return;
+    if (!ctx || !this.buffer || !this.echo || this.muted || ctx.state !== 'running') return;
     if (!this.limiter.allow(name, ctx.currentTime, 0.6)) return;
     const panner = this.panner(at);
+    panner.connect(this.echo);
     playRecipe(name, ctx, panner, ctx.currentTime + 0.005, this.buffer);
     setTimeout(() => panner.disconnect(), 1500);
   }

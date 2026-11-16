@@ -1,9 +1,9 @@
 // Rebuilds a recording's soundtrack, because the DevTools screencast captures pictures only. In
 // the page it renders, offline, the game's own sound recipes (src/audio/recipes.ts) and night
-// ambience at the moments and wall positions the game traced. It uses the same HRTF panning and
-// voice limiter, with the listener at the emulated head. It joins the segments that
-// scripts/record.mjs wrote to docs/video/frames/<n>/ end to end, as scripts/encode.py does, and
-// writes docs/video/audio.wav (48 kHz stereo).
+// ambience at the moments and wall positions the game traced. It uses the same HRTF panning, room
+// echo (src/audio/room.ts) and voice limiter, with the listener at the emulated head. It joins
+// the segments that scripts/record.mjs wrote to docs/video/frames/<n>/ end to end, as
+// scripts/encode.py does, and writes docs/video/audio.wav (48 kHz stereo).
 // Usage: ./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -60,12 +60,15 @@ export default async function run({ page, workspaceRoot }) {
   const info = await page.evaluate(
     async ({ events, duration, pitch }) => {
       const { playRecipe } = await import('/src/audio/recipes.ts');
+      const { createRoomEcho } = await import('/src/audio/room.ts');
       const { VoiceLimiter } = await import('/src/core/voices.ts');
       const rate = 48000;
       const ctx = new OfflineAudioContext(2, Math.ceil(duration * rate), rate);
       const master = ctx.createGain();
       master.gain.value = 0.8;
       master.connect(ctx.destination);
+      // Every one-shot also plays into the room, as in AudioEngine.play.
+      const echo = createRoomEcho(ctx, master);
       const noise = ctx.createBuffer(1, rate * 2, rate);
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -152,7 +155,9 @@ export default async function run({ page, workspaceRoot }) {
         }
         const sound = /^\[ShadowZoo\] sound (\S+) \(audio (\w+)\) @ (\S+) (\S+) (\S+)/.exec(e.text);
         if (!sound || sound[2] === 'muted' || !limiter.allow(sound[1], e.t, 0.6)) continue;
-        playRecipe(sound[1], ctx, panner(sound.slice(3, 6).map(Number)), e.t + 0.005, noise);
+        const at = panner(sound.slice(3, 6).map(Number));
+        at.connect(echo);
+        playRecipe(sound[1], ctx, at, e.t + 0.005, noise);
         sounds++;
       }
       if (open) ambient(open.t, duration, open.at);
