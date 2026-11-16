@@ -1,9 +1,9 @@
 // Rebuilds a recording's soundtrack, because the DevTools screencast captures pictures only. In
 // the page it renders, offline, the game's own sound recipes (src/audio/recipes.ts) and night
-// ambience at the moments and wall positions the game traced. It uses the same HRTF panning, room
-// echo (src/audio/room.ts) and voice limiter, with the listener at the emulated head. It joins
-// the segments that scripts/record.mjs wrote to docs/video/frames/<n>/ end to end, as
-// scripts/encode.py does, and writes docs/video/audio.wav (48 kHz stereo).
+// ambience (src/audio/ambience.ts) at the moments and wall positions the game traced. It uses the
+// same HRTF panning, room echo (src/audio/room.ts) and voice limiter, with the listener at the
+// emulated head. It joins the segments that scripts/record.mjs wrote to docs/video/frames/<n>/ end
+// to end, as scripts/encode.py does, and writes docs/video/audio.wav (48 kHz stereo).
 // Usage: ./node_modules/.bin/iwsdk browser run scripts/render-audio.mjs --timeout 110000
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -61,6 +61,7 @@ export default async function run({ page, workspaceRoot }) {
     async ({ events, duration, pitch }) => {
       const { playRecipe } = await import('/src/audio/recipes.ts');
       const { createRoomEcho } = await import('/src/audio/room.ts');
+      const { buildAmbience, createChorus, createNoise } = await import('/src/audio/ambience.ts');
       const { VoiceLimiter } = await import('/src/core/voices.ts');
       const rate = 48000;
       const ctx = new OfflineAudioContext(2, Math.ceil(duration * rate), rate);
@@ -69,9 +70,7 @@ export default async function run({ page, workspaceRoot }) {
       master.connect(ctx.destination);
       // Every one-shot also plays into the room, as in AudioEngine.play.
       const echo = createRoomEcho(ctx, master);
-      const noise = ctx.createBuffer(1, rate * 2, rate);
-      const data = noise.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = createNoise(ctx);
       const l = ctx.listener;
       const p = (pitch * Math.PI) / 180;
       l.positionX.value = 0;
@@ -95,46 +94,11 @@ export default async function run({ page, workspaceRoot }) {
         n.connect(master);
         return n;
       };
-      // Same graph as AudioEngine.startAmbient: crickets from the stage and a low room tone.
-      const ambient = (from, to, at) => {
-        const out = panner(at);
-        const crickets = ctx.createBufferSource();
-        crickets.buffer = noise;
-        crickets.loop = true;
-        const band = ctx.createBiquadFilter();
-        band.type = 'bandpass';
-        band.frequency.value = 4400;
-        band.Q.value = 9;
-        const gate = ctx.createGain();
-        gate.gain.value = 0.5;
-        const chirp = ctx.createOscillator();
-        chirp.type = 'square';
-        chirp.frequency.value = 19;
-        const chirpDepth = ctx.createGain();
-        chirpDepth.gain.value = 0.5;
-        const level = ctx.createGain();
-        level.gain.value = 0.014;
-        const swell = ctx.createOscillator();
-        swell.frequency.value = 0.35;
-        const swellDepth = ctx.createGain();
-        swellDepth.gain.value = 0.012;
-        chirp.connect(chirpDepth).connect(gate.gain);
-        swell.connect(swellDepth).connect(level.gain);
-        crickets.connect(band).connect(gate).connect(level).connect(out);
-        const room = ctx.createBufferSource();
-        room.buffer = noise;
-        room.loop = true;
-        const low = ctx.createBiquadFilter();
-        low.type = 'lowpass';
-        low.frequency.value = 220;
-        const roomLevel = ctx.createGain();
-        roomLevel.gain.value = 0.025;
-        room.connect(low).connect(roomLevel).connect(master);
-        for (const s of [crickets, chirp, swell, room]) {
-          s.start(from);
-          s.stop(to);
-        }
-      };
+      // The game's own night, as AudioEngine.startAmbient builds it: the cricket chorus from the stage
+      // and a low room tone (the traces don't say where the zoo was, so home). Like the game, one
+      // chorus for the whole session.
+      const chorus = createChorus(ctx, 'home', Math.random);
+      const ambient = (from, to, at) => buildAmbience(ctx, master, 'home', noise, Math.random, { insects: panner(at), when: from, chorus }).stop(to);
 
       const limiter = new VoiceLimiter();
       let open = null;

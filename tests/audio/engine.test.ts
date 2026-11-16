@@ -1,5 +1,7 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
+import { buildAmbience } from '../../src/audio/ambience.js';
 import { AudioEngine } from '../../src/audio/AudioEngine.js';
+import { mulberry32 } from '../../src/core/rng.js';
 
 const param = () => ({ value: 0, setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn() });
 
@@ -61,6 +63,12 @@ const unlocked = (paramListener = true) => {
   return { engine, made };
 };
 const listenerOf = (engine: AudioEngine) => (engine as unknown as { ctx: { listener: Record<string, unknown> } }).ctx.listener;
+interface FakeBuffer {
+  readonly duration: number;
+}
+const masterOf = (made: FakeNode[]) => made.find((n) => n.kind === 'gain' && n.feeds.some((f) => f.kind === 'destination'))!;
+const feeding = (made: FakeNode[], target: FakeNode) => made.find((n) => n.feeds.includes(target))!;
+const startOffset = (source: FakeNode) => (source.start as Mock).mock.calls[0][1] as number;
 const only = (made: FakeNode[], kind: string) => {
   const all = made.filter((n) => n.kind === kind);
   expect(all).toHaveLength(1);
@@ -98,7 +106,7 @@ describe('AudioEngine room echo', () => {
     const { engine, made } = unlocked();
     engine.play('pet', [0, 1.4, -2]);
     engine.play('eat', [0.3, 1.2, -2]);
-    const master = made.find((n) => n.kind === 'gain' && n.feeds.some((f) => f.kind === 'destination'))!;
+    const master = masterOf(made);
     const room = only(made, 'convolver');
     const send = made.find((n) => n.feeds.includes(room))!;
     const panners = made.filter((n) => n.kind === 'panner');
@@ -117,5 +125,59 @@ describe('AudioEngine room echo', () => {
     expect(db).toBeGreaterThan(-18);
     expect(db).toBeLessThan(-12);
     expect(wet.feeds).toEqual([master]);
+  });
+});
+
+describe('AudioEngine night ambience', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('plays every layer from its own point in a long noise buffer, so none repeat in step', () => {
+    const { engine, made } = unlocked();
+    engine.startAmbient([0, 1.3, -2], 'amazon');
+    const sources = made.filter((n) => n.kind === 'source');
+    // The cricket chorus, the rain and the room tone.
+    expect(sources).toHaveLength(3);
+    for (const s of sources) {
+      expect(s.loop).toBe(true);
+      expect(startOffset(s)).toBeGreaterThanOrEqual(0);
+      expect(startOffset(s)).toBeLessThan((s.buffer as FakeBuffer).duration);
+    }
+    expect(new Set(sources.map(startOffset)).size).toBe(3);
+    // Noise is filtered into wind, rain or room tone; the chorus plays as it was rendered.
+    const noise = sources.filter((s) => s.feeds[0].kind === 'filter');
+    expect(noise).toHaveLength(2);
+    for (const s of noise) expect((s.buffer as FakeBuffer).duration).toBeGreaterThanOrEqual(5);
+  });
+
+  it('sings a chorus of crickets from the stage, rendered once for the place, and lets it all go on stopping', () => {
+    const { engine, made } = unlocked();
+    engine.startAmbient([0, 1.3, -2], 'home');
+    const panner = only(made, 'panner');
+    expect(panner.feeds).toEqual([masterOf(made)]);
+    // Straight from the rendered chorus: pure tones, no filtered noise.
+    const chorus = feeding(made, feeding(made, panner));
+    expect(chorus.kind).toBe('source');
+    engine.stopAmbient();
+    for (const s of made.filter((n) => n.kind === 'source' || n.kind === 'oscillator')) expect(s.stop).toHaveBeenCalled();
+    expect(panner.disconnect).toHaveBeenCalled();
+    engine.startAmbient([0, 1.3, -2], 'home');
+    const again = feeding(made, feeding(made, made.filter((n) => n.kind === 'panner')[1]));
+    expect(again.buffer).toBe(chorus.buffer);
+  });
+
+  it('can be scheduled to start and end, for an offline render of the same night', () => {
+    const made: FakeNode[] = [];
+    const ctx = new (fakeContext(true, made))();
+    const master = ctx.createGain();
+    const noise = ctx.createBuffer(1, 48000 * 6, 48000);
+    const night = buildAmbience(ctx as unknown as BaseAudioContext, master as unknown as AudioNode, 'home', noise as unknown as AudioBuffer, mulberry32(1), { when: 2 });
+    night.stop(9);
+    const scheduled = made.filter((n) => n.kind === 'source' || n.kind === 'oscillator');
+    expect(scheduled.length).toBeGreaterThan(0);
+    for (const s of scheduled) {
+      expect((s.start as Mock).mock.calls[0][0]).toBe(2);
+      expect(s.stop).toHaveBeenCalledWith(9);
+    }
+    for (const n of made) expect(n.disconnect).not.toHaveBeenCalled();
   });
 });
