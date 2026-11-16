@@ -133,12 +133,13 @@ Open the same link in Chrome, Edge, Safari or Firefox.
 - WebXR hand tracking (all 25 joints, with radii) and plane detection through the Immersive Web SDK, with semantic wall labels when available.
 - It's built to hold up in rooms we never tested: it prefers real walls by size and label, ignores pictures and windows, and falls back to a paper screen.
 - It's light enough for standalone hardware: one instanced mask pass of at most 1,024 capsules, one composite quad, one 64-point dust draw, and no image or audio files for the game to load.
-- There are 264 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
+- There are 289 automated tests (Vitest) covering the projection, matching, every creature's robustness to hand size, rotation and noise, progression, saving, the session flow, the desktop preview and camera mapping. An emulator drill brings all seven creatures to life with the emulator's built-in hand poses.
 
 ### Polish and presentation
 
 - Handcrafted throughout: the homepage is an explorer's night atlas, engraved in gold and lit by one lantern, and the game is warm candlelight and soft shadows on your own wall, from the first rabbit to the golden finale.
-- Sound is synthesized and placed in space: crickets from the wall, a voice for each creature, chirps for fireflies.
+- Sound is synthesized and placed in space: a chorus of crickets from the wall, a voice for each creature, chirps for fireflies, and a soft echo so every sound rings in your own room.
+- Creatures move like bodies: they speed up, brake and turn round through side-on, and their hops follow the ground they cover. Fireflies flash, each on its own rhythm.
 - The demo video is real gameplay with captions.
 
 ## What's real and what's emulated
@@ -166,7 +167,7 @@ Requires Node 20.19+, 22.12+ or 24+.
 ```bash
 npm install
 npm run dev          # IWSDK dev server with the WebXR emulator (Meta Quest 3 in a synthetic living room)
-npm test             # 264 tests (Vitest)
+npm test             # 289 tests (Vitest)
 npm run typecheck
 npm run build        # static site in dist/; GitHub Actions deploys main to GitHub Pages
 ```
